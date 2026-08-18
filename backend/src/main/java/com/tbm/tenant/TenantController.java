@@ -1,6 +1,5 @@
 package com.tbm.tenant;
 
-import com.tbm.security.JwtService;
 import com.tbm.tenant.dto.TenantInput;
 import com.tbm.tenant.dto.TenantResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -9,7 +8,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,35 +31,29 @@ public class TenantController {
     }
 
     @GetMapping
-    public List<TenantResponse> list(@AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        return tenantService.list(principal.userId());
+    public List<TenantResponse> list() {
+        return tenantService.list();
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TenantResponse create(
-            @Valid @RequestBody TenantInput input, @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        return tenantService.create(input, principal.userId());
+    public TenantResponse create(@Valid @RequestBody TenantInput input) {
+        return tenantService.create(input);
     }
 
     @GetMapping("/{tenantId}")
-    public TenantResponse get(
-            @PathVariable UUID tenantId, @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        return tenantService.get(tenantId, principal.userId());
+    public TenantResponse get(@PathVariable UUID tenantId) {
+        return tenantService.get(tenantId);
     }
 
     @PutMapping("/{tenantId}")
-    public TenantResponse update(
-            @PathVariable UUID tenantId,
-            @Valid @RequestBody TenantInput input,
-            @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        return tenantService.update(tenantId, input, principal.userId());
+    public TenantResponse update(@PathVariable UUID tenantId, @Valid @RequestBody TenantInput input) {
+        return tenantService.update(tenantId, input);
     }
 
     @DeleteMapping("/{tenantId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(
-            @PathVariable UUID tenantId, @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        tenantService.delete(tenantId, principal.userId());
+    public void delete(@PathVariable UUID tenantId) {
+        tenantService.delete(tenantId);
     }
 }

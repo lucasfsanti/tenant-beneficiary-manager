@@ -1,6 +1,5 @@
 package com.tbm.tenant;
 
-import com.tbm.security.JwtService;
 import com.tbm.tenant.dto.AddMemberRequest;
 import com.tbm.tenant.dto.MemberResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -9,7 +8,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,44 +31,32 @@ public class MembershipController {
     }
 
     @GetMapping
-    public List<MemberResponse> list(
-            @PathVariable UUID tenantId, @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        return membershipService.listMembers(tenantId, principal.userId());
+    public List<MemberResponse> list(@PathVariable UUID tenantId) {
+        return membershipService.listMembers(tenantId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public MemberResponse add(
-            @PathVariable UUID tenantId,
-            @Valid @RequestBody AddMemberRequest request,
-            @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        return membershipService.addMember(tenantId, request.userId(), principal.userId());
+            @PathVariable UUID tenantId, @Valid @RequestBody AddMemberRequest request) {
+        return membershipService.addMember(tenantId, request.userId());
     }
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void remove(
-            @PathVariable UUID tenantId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        membershipService.removeMember(tenantId, userId, principal.userId());
+    public void remove(@PathVariable UUID tenantId, @PathVariable UUID userId) {
+        membershipService.removeMember(tenantId, userId);
     }
 
     @PutMapping("/{userId}/tenant-admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void grantTenantAdmin(
-            @PathVariable UUID tenantId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        membershipService.grantTenantAdmin(tenantId, userId, principal.userId());
+    public void grantTenantAdmin(@PathVariable UUID tenantId, @PathVariable UUID userId) {
+        membershipService.grantTenantAdmin(tenantId, userId);
     }
 
     @DeleteMapping("/{userId}/tenant-admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revokeTenantAdmin(
-            @PathVariable UUID tenantId,
-            @PathVariable UUID userId,
-            @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        membershipService.revokeTenantAdmin(tenantId, userId, principal.userId());
+    public void revokeTenantAdmin(@PathVariable UUID tenantId, @PathVariable UUID userId) {
+        membershipService.revokeTenantAdmin(tenantId, userId);
     }
 }

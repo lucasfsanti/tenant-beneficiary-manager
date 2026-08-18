@@ -4,7 +4,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tbm.user.AppUserRepository;
 import com.tbm.user.UserTenantMembershipRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,10 +34,7 @@ class TenantContextFilterTest {
                         new UsernamePasswordAuthenticationToken("not-a-jwt-principal", null));
 
         TenantContextFilter filter =
-                new TenantContextFilter(
-                        mock(UserTenantMembershipRepository.class),
-                        mock(AppUserRepository.class),
-                        new ObjectMapper());
+                new TenantContextFilter(mock(UserTenantMembershipRepository.class), new ObjectMapper());
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);

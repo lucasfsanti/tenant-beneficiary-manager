@@ -2,7 +2,6 @@ package com.tbm.common;
 
 import com.tbm.common.exception.BusinessRuleException;
 import com.tbm.common.exception.ConflictException;
-import com.tbm.common.exception.ForbiddenException;
 import com.tbm.common.exception.NotFoundException;
 import com.tbm.common.exception.UnauthorizedException;
 import java.util.List;
@@ -11,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -79,9 +79,20 @@ public class ApiExceptionHandler {
         return problem;
     }
 
-    @ExceptionHandler(ForbiddenException.class)
-    public ProblemDetail handleForbidden(ForbiddenException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+    /**
+     * Maps {@code @PreAuthorize} denials to the same {@code 403} shape the removed
+     * {@code ForbiddenException} handler used to produce (spec FR-005). This MUST stay a handler
+     * here rather than a filter-level {@code AccessDeniedHandler}: every {@code @PreAuthorize}
+     * check in this app runs inside a service method invoked during MVC dispatch, so the generic
+     * {@link #handleUnexpected} handler below would otherwise catch it first — an
+     * {@code AccessDeniedException} never reaches Spring Security's {@code ExceptionTranslationFilter}
+     * once a {@code @RestControllerAdvice} is already resolving it at the MVC layer.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        ProblemDetail problem =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.FORBIDDEN, "Você não tem permissão para realizar esta ação.");
         problem.setTitle("Acesso negado");
         return problem;
     }

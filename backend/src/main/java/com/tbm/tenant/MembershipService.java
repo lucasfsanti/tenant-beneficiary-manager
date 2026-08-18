@@ -1,6 +1,5 @@
 package com.tbm.tenant;
 
-import com.tbm.common.exception.ForbiddenException;
 import com.tbm.common.exception.NotFoundException;
 import com.tbm.tenant.dto.MemberResponse;
 import com.tbm.user.AppUser;
@@ -9,6 +8,7 @@ import com.tbm.user.UserTenantMembership;
 import com.tbm.user.UserTenantMembershipRepository;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,9 +28,9 @@ public class MembershipService {
         this.membershipRepository = membershipRepository;
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN') or @tenantAuthorization.isTenantAdmin(#tenantId)")
     @Transactional(readOnly = true)
-    public List<MemberResponse> listMembers(UUID tenantId, UUID callerId) {
-        requireStandingFor(callerId, tenantId);
+    public List<MemberResponse> listMembers(UUID tenantId) {
         return membershipRepository.findByTenant_IdFetchUser(tenantId).stream()
                 .map(
                         m ->
@@ -39,9 +39,9 @@ public class MembershipService {
                 .toList();
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN') or @tenantAuthorization.isTenantAdmin(#tenantId)")
     @Transactional
-    public MemberResponse addMember(UUID tenantId, UUID targetUserId, UUID callerId) {
-        requireStandingFor(callerId, tenantId);
+    public MemberResponse addMember(UUID tenantId, UUID targetUserId) {
         Tenant tenant =
                 tenantRepository.findById(tenantId).orElseThrow(() -> new NotFoundException("Tenant não encontrado."));
         AppUser targetUser =
@@ -56,17 +56,17 @@ public class MembershipService {
         return new MemberResponse(targetUser.getId(), targetUser.getUsername(), membership.isTenantAdmin());
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN') or @tenantAuthorization.isTenantAdmin(#tenantId)")
     @Transactional
-    public void removeMember(UUID tenantId, UUID targetUserId, UUID callerId) {
-        requireStandingFor(callerId, tenantId);
+    public void removeMember(UUID tenantId, UUID targetUserId) {
         membershipRepository
                 .findByUser_IdAndTenant_Id(targetUserId, tenantId)
                 .ifPresent(membershipRepository::delete);
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN') or @tenantAuthorization.isTenantAdmin(#tenantId)")
     @Transactional
-    public void grantTenantAdmin(UUID tenantId, UUID targetUserId, UUID callerId) {
-        requireStandingFor(callerId, tenantId);
+    public void grantTenantAdmin(UUID tenantId, UUID targetUserId) {
         UserTenantMembership membership = findMembershipOrThrow(tenantId, targetUserId);
         if (!membership.isTenantAdmin()) {
             membership.setTenantAdmin(true);
@@ -74,9 +74,9 @@ public class MembershipService {
         }
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN') or @tenantAuthorization.isTenantAdmin(#tenantId)")
     @Transactional
-    public void revokeTenantAdmin(UUID tenantId, UUID targetUserId, UUID callerId) {
-        requireStandingFor(callerId, tenantId);
+    public void revokeTenantAdmin(UUID tenantId, UUID targetUserId) {
         UserTenantMembership membership = findMembershipOrThrow(tenantId, targetUserId);
         if (membership.isTenantAdmin()) {
             membership.setTenantAdmin(false);
@@ -88,17 +88,5 @@ public class MembershipService {
         return membershipRepository
                 .findByUser_IdAndTenant_Id(userId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Este usuário não é membro deste tenant."));
-    }
-
-    /** FR-005/FR-006/FR-008: System Admin platform-wide, or Tenant Admin of this specific tenant. */
-    private void requireStandingFor(UUID callerId, UUID tenantId) {
-        boolean isSystemAdmin = appUserRepository.findById(callerId).map(AppUser::isSystemAdmin).orElse(false);
-        if (isSystemAdmin) {
-            return;
-        }
-        if (!membershipRepository.existsByUser_IdAndTenant_IdAndIsTenantAdminTrue(callerId, tenantId)) {
-            throw new ForbiddenException(
-                    "Apenas um System Admin ou o Tenant Admin deste tenant pode realizar esta ação.");
-        }
     }
 }

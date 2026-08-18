@@ -1,8 +1,6 @@
 package com.tbm.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tbm.user.AppUser;
-import com.tbm.user.AppUserRepository;
 import com.tbm.user.UserTenantMembershipRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,21 +22,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * point. Rejects with 403 if {@code X-Tenant-Id} is neither one of the caller's own memberships
  * nor the caller holds System Admin standing, which grants every Normal-tier action across every
  * tenant platform-wide regardless of membership (FR-008).
+ *
+ * <p>System Admin standing is read from the {@code ROLE_SYSTEM_ADMIN} authority already populated
+ * on the request's {@link Authentication} by {@link JwtAuthenticationFilter}, rather than this
+ * filter re-querying it independently — a single source of truth per request (research.md §5).
  */
 public class TenantContextFilter extends OncePerRequestFilter {
 
     private static final String TENANT_HEADER = "X-Tenant-Id";
+    private static final String SYSTEM_ADMIN_AUTHORITY = "ROLE_SYSTEM_ADMIN";
 
     private final UserTenantMembershipRepository membershipRepository;
-    private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
 
     public TenantContextFilter(
-            UserTenantMembershipRepository membershipRepository,
-            AppUserRepository appUserRepository,
-            ObjectMapper objectMapper) {
+            UserTenantMembershipRepository membershipRepository, ObjectMapper objectMapper) {
         this.membershipRepository = membershipRepository;
-        this.appUserRepository = appUserRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -78,7 +77,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
         }
 
         boolean isSystemAdmin =
-                appUserRepository.findById(principal.userId()).map(AppUser::isSystemAdmin).orElse(false);
+                authentication.getAuthorities().stream()
+                        .anyMatch(authority -> SYSTEM_ADMIN_AUTHORITY.equals(authority.getAuthority()));
         if (!isSystemAdmin
                 && !membershipRepository.existsByUser_IdAndTenant_Id(principal.userId(), tenantId)) {
             writeProblem(

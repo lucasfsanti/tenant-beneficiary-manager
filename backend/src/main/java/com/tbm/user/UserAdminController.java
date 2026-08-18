@@ -1,11 +1,9 @@
 package com.tbm.user;
 
-import com.tbm.security.JwtService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -27,15 +25,13 @@ public class UserAdminController {
 
     @PutMapping("/{userId}/system-admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void grant(
-            @PathVariable UUID userId, @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        appUserService.grantSystemAdmin(userId, principal.userId());
+    public void grant(@PathVariable UUID userId) {
+        appUserService.grantSystemAdmin(userId);
     }
 
     @DeleteMapping("/{userId}/system-admin")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revoke(
-            @PathVariable UUID userId, @AuthenticationPrincipal JwtService.JwtPrincipal principal) {
-        appUserService.revokeSystemAdmin(userId, principal.userId());
+    public void revoke(@PathVariable UUID userId) {
+        appUserService.revokeSystemAdmin(userId);
     }
 }

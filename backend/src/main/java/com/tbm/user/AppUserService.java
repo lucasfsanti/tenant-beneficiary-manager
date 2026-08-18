@@ -1,10 +1,10 @@
 package com.tbm.user;
 
 import com.tbm.common.exception.BusinessRuleException;
-import com.tbm.common.exception.ForbiddenException;
 import com.tbm.common.exception.NotFoundException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +17,9 @@ public class AppUserService {
         this.appUserRepository = appUserRepository;
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @Transactional
-    public void grantSystemAdmin(UUID targetUserId, UUID callerId) {
-        requireSystemAdmin(callerId);
+    public void grantSystemAdmin(UUID targetUserId) {
         AppUser target = findOrThrow(targetUserId);
         if (!target.isSystemAdmin()) {
             target.setSystemAdmin(true);
@@ -27,9 +27,9 @@ public class AppUserService {
         }
     }
 
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @Transactional
-    public void revokeSystemAdmin(UUID targetUserId, UUID callerId) {
-        requireSystemAdmin(callerId);
+    public void revokeSystemAdmin(UUID targetUserId) {
         if (!appUserRepository.existsById(targetUserId)) {
             throw new NotFoundException("Usuário não encontrado.");
         }
@@ -48,16 +48,6 @@ public class AppUserService {
         }
         target.setSystemAdmin(false);
         appUserRepository.save(target);
-    }
-
-    private void requireSystemAdmin(UUID callerId) {
-        AppUser caller =
-                appUserRepository
-                        .findById(callerId)
-                        .orElseThrow(() -> new ForbiddenException("Apenas um System Admin pode realizar esta ação."));
-        if (!caller.isSystemAdmin()) {
-            throw new ForbiddenException("Apenas um System Admin pode realizar esta ação.");
-        }
     }
 
     private AppUser findOrThrow(UUID userId) {
