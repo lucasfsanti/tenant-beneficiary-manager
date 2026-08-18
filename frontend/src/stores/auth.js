@@ -15,7 +15,10 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => !!state.token,
     memberships: (state) => state.user?.tenants || [],
     activeTenant: (state) =>
-      state.user?.tenants?.find((t) => t.id === state.activeTenantId) || null
+      state.user?.tenants?.find((t) => t.id === state.activeTenantId) || null,
+    isSystemAdmin: (state) => !!state.user?.isSystemAdmin,
+    isTenantAdminFor: (state) => (tenantId) =>
+      !!state.user?.tenants?.find((t) => t.id === tenantId)?.isTenantAdmin
   },
   actions: {
     async login(username, password) {

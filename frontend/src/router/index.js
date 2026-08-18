@@ -40,6 +40,33 @@ const routes = [
     name: 'beneficiarios-edit',
     component: () => import('../views/BeneficiarioFormView.vue'),
     props: true
+  },
+  {
+    path: '/tenants',
+    name: 'tenants-list',
+    component: () => import('../views/TenantListView.vue'),
+    meta: { requiresSystemAdmin: true }
+  },
+  {
+    path: '/tenants/novo',
+    name: 'tenants-new',
+    component: () => import('../views/TenantFormView.vue'),
+    meta: { requiresSystemAdmin: true }
+  },
+  {
+    path: '/tenants/:id/editar',
+    name: 'tenants-edit',
+    component: () => import('../views/TenantFormView.vue'),
+    props: true,
+    // System Admin, or the Tenant Admin of this specific tenant (FR-004/FR-005(b)) — not
+    // System-Admin-exclusive like the other /tenants routes above.
+    meta: { requiresSystemAdminOrTenantAdminOf: 'id' }
+  },
+  {
+    path: '/admins',
+    name: 'system-admins',
+    component: () => import('../views/SystemAdminsView.vue'),
+    meta: { requiresSystemAdmin: true }
   }
 ]
 
@@ -55,6 +82,15 @@ router.beforeEach((to) => {
   }
   if (to.name === 'login' && auth.isAuthenticated) {
     return { path: '/pessoas' }
+  }
+  if (to.meta.requiresSystemAdmin && !auth.isSystemAdmin) {
+    return { path: '/pessoas' }
+  }
+  if (to.meta.requiresSystemAdminOrTenantAdminOf) {
+    const tenantId = to.params[to.meta.requiresSystemAdminOrTenantAdminOf]
+    if (!auth.isSystemAdmin && !auth.isTenantAdminFor(tenantId)) {
+      return { path: '/pessoas' }
+    }
   }
   return true
 })
