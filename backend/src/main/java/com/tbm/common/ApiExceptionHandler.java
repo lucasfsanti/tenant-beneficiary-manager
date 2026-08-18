@@ -2,6 +2,7 @@ package com.tbm.common;
 
 import com.tbm.common.exception.BusinessRuleException;
 import com.tbm.common.exception.ConflictException;
+import com.tbm.common.exception.ForbiddenException;
 import com.tbm.common.exception.NotFoundException;
 import com.tbm.common.exception.UnauthorizedException;
 import java.util.List;
@@ -75,6 +76,13 @@ public class ApiExceptionHandler {
     public ProblemDetail handleUnauthorized(UnauthorizedException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
         problem.setTitle("Não autenticado");
+        return problem;
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ProblemDetail handleForbidden(ForbiddenException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setTitle("Acesso negado");
         return problem;
     }
 

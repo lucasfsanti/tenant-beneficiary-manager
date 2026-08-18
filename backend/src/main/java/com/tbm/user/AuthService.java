@@ -59,8 +59,13 @@ public class AuthService {
     private UserProfile buildProfile(AppUser user) {
         List<TenantSummary> tenants =
                 membershipRepository.findByUser_IdFetchTenant(user.getId()).stream()
-                        .map(m -> new TenantSummary(m.getTenant().getId(), m.getTenant().getNome()))
+                        .map(
+                                m ->
+                                        new TenantSummary(
+                                                m.getTenant().getId(),
+                                                m.getTenant().getNome(),
+                                                m.isTenantAdmin()))
                         .toList();
-        return new UserProfile(user.getId(), user.getUsername(), tenants);
+        return new UserProfile(user.getId(), user.getUsername(), user.isSystemAdmin(), tenants);
     }
 }

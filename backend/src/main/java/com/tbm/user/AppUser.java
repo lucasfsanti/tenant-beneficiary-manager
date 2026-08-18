@@ -23,6 +23,9 @@ public class AppUser {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(name = "is_system_admin", nullable = false)
+    private boolean isSystemAdmin;
+
     public UUID getId() {
         return id;
     }
@@ -53,5 +56,13 @@ public class AppUser {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isSystemAdmin() {
+        return isSystemAdmin;
+    }
+
+    public void setSystemAdmin(boolean systemAdmin) {
+        this.isSystemAdmin = systemAdmin;
     }
 }

@@ -19,6 +19,16 @@ public abstract class AbstractIntegrationTest {
     protected static final String TENANT_ALFA_ID = "11111111-1111-1111-1111-111111111111";
     protected static final String TENANT_BETA_ID = "22222222-2222-2222-2222-222222222222";
 
+    /** Seeded (003-role-system.sql) Tenant Admin of Tenant Alfa only. */
+    protected static final String BRUNO_USERNAME = "bruno";
+
+    protected static final String BRUNO_PASSWORD = "demo123";
+
+    /** Seeded (003-role-system.sql) platform-wide System Admin, no tenant memberships. */
+    protected static final String ADMIN_USERNAME = "admin";
+
+    protected static final String ADMIN_PASSWORD = "demo123";
+
     /**
      * Deliberately NOT annotated with {@code @Testcontainers}/{@code @Container}: that combo
      * scopes the container's start/stop lifecycle to each individual test class (JUnit5

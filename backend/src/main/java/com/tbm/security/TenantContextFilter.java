@@ -1,6 +1,8 @@
 package com.tbm.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tbm.user.AppUser;
+import com.tbm.user.AppUserRepository;
 import com.tbm.user.UserTenantMembershipRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,18 +21,24 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Resolves and validates the active tenant for every {@code /api/beneficiarios/**} request,
  * before any repository access — Constitution Principle I's single centralized enforcement
- * point. Rejects with 403 if {@code X-Tenant-Id} is not one of the caller's own memberships.
+ * point. Rejects with 403 if {@code X-Tenant-Id} is neither one of the caller's own memberships
+ * nor the caller holds System Admin standing, which grants every Normal-tier action across every
+ * tenant platform-wide regardless of membership (FR-008).
  */
 public class TenantContextFilter extends OncePerRequestFilter {
 
     private static final String TENANT_HEADER = "X-Tenant-Id";
 
     private final UserTenantMembershipRepository membershipRepository;
+    private final AppUserRepository appUserRepository;
     private final ObjectMapper objectMapper;
 
     public TenantContextFilter(
-            UserTenantMembershipRepository membershipRepository, ObjectMapper objectMapper) {
+            UserTenantMembershipRepository membershipRepository,
+            AppUserRepository appUserRepository,
+            ObjectMapper objectMapper) {
         this.membershipRepository = membershipRepository;
+        this.appUserRepository = appUserRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -69,7 +77,10 @@ public class TenantContextFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (!membershipRepository.existsByUser_IdAndTenant_Id(principal.userId(), tenantId)) {
+        boolean isSystemAdmin =
+                appUserRepository.findById(principal.userId()).map(AppUser::isSystemAdmin).orElse(false);
+        if (!isSystemAdmin
+                && !membershipRepository.existsByUser_IdAndTenant_Id(principal.userId(), tenantId)) {
             writeProblem(
                     response,
                     HttpStatus.FORBIDDEN,

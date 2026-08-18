@@ -1,5 +1,6 @@
 package com.tbm.user;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.MapsId;
@@ -24,6 +25,9 @@ public class UserTenantMembership {
     @jakarta.persistence.JoinColumn(name = "tenant_id")
     private Tenant tenant;
 
+    @Column(name = "is_tenant_admin", nullable = false)
+    private boolean isTenantAdmin;
+
     public UserTenantMembership() {
     }
 
@@ -43,5 +47,13 @@ public class UserTenantMembership {
 
     public Tenant getTenant() {
         return tenant;
+    }
+
+    public boolean isTenantAdmin() {
+        return isTenantAdmin;
+    }
+
+    public void setTenantAdmin(boolean tenantAdmin) {
+        this.isTenantAdmin = tenantAdmin;
     }
 }

@@ -18,6 +18,8 @@ public interface BeneficiarioRepository extends JpaRepository<Beneficiario, UUID
 
     Optional<Beneficiario> findByIdAndTenantId(UUID id, UUID tenantId);
 
+    boolean existsByTenantId(UUID tenantId);
+
     boolean existsByTenantIdAndMatricula(UUID tenantId, String matricula);
 
     boolean existsByTenantIdAndMatriculaAndIdNot(UUID tenantId, String matricula, UUID id);

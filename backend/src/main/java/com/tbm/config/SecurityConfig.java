@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tbm.security.JwtAuthenticationFilter;
 import com.tbm.security.JwtService;
 import com.tbm.security.TenantContextFilter;
+import com.tbm.user.AppUserRepository;
 import com.tbm.user.UserTenantMembershipRepository;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +45,7 @@ public class SecurityConfig {
             HttpSecurity http,
             JwtService jwtService,
             UserTenantMembershipRepository membershipRepository,
+            AppUserRepository appUserRepository,
             ObjectMapper objectMapper)
             throws Exception {
         http.csrf(csrf -> csrf.disable())
@@ -69,7 +71,7 @@ public class SecurityConfig {
                         new JwtAuthenticationFilter(jwtService),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(
-                        new TenantContextFilter(membershipRepository, objectMapper),
+                        new TenantContextFilter(membershipRepository, appUserRepository, objectMapper),
                         JwtAuthenticationFilter.class);
         return http.build();
     }
