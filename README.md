@@ -17,7 +17,7 @@ docker-compose up
 Isso sobe três serviços:
 
 - **db** — PostgreSQL 16, com um healthcheck que os demais serviços aguardam.
-- **backend** — Spring Boot, na porta `8080`. As migrações do banco (schema + dados de
+- **backend** — Spring Boot, na porta `8080`. As migrações Liquibase (schema + dados de
   demonstração) rodam automaticamente na inicialização.
 - **frontend** — build estático do Vue 3 servido por Nginx, na porta `8081`, que faz proxy reverso
   de `/api`, `/swagger-ui.html` e `/v3/api-docs` para o backend.
