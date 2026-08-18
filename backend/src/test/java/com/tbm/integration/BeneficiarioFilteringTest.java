@@ -60,6 +60,31 @@ class BeneficiarioFilteringTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void treatsABlankPessoaNomeFilterAsUnfiltered() {
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios?pessoaNome=",
+                        HttpMethod.GET,
+                        entity(null, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<Map<String, Object>>) response.getBody().get("content")).isNotEmpty();
+    }
+
+    @Test
+    void filterMatchingNoRecordsShowsEmptyStateNotError() {
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios?pessoaNome=ZZZ_NOME_INEXISTENTE_ZZZ",
+                        HttpMethod.GET,
+                        entity(null, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<?>) response.getBody().get("content")).isEmpty();
+    }
+
+    @Test
     void pageBeyondLastReturnsEmptyNotError() {
         ResponseEntity<Map> response =
                 restTemplate.exchange(

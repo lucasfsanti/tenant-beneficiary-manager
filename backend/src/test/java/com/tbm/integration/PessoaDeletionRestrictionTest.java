@@ -2,6 +2,8 @@ package com.tbm.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tbm.pessoa.dto.PessoaInput;
+import com.tbm.pessoa.dto.PessoaResponse;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +15,29 @@ class PessoaDeletionRestrictionTest extends AbstractIntegrationTest {
 
     /** Seeded Pessoa (V2__seed_demo_data.sql) referenced by Beneficiario rows in both tenants. */
     private static final String REFERENCED_PESSOA_ID = "55555555-5555-5555-5555-555555555551";
+
+    @Test
+    void deletesSuccessfullyWhenNotLinkedToAnyBeneficiario() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(loginAndGetToken(ANA_USERNAME, ANA_PASSWORD));
+
+        PessoaInput input = new PessoaInput("Sem Vinculo", "16899535009", null, null);
+        ResponseEntity<PessoaResponse> createResponse =
+                restTemplate.exchange(
+                        "/api/pessoas", HttpMethod.POST, entity(input, headers), PessoaResponse.class);
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String id = createResponse.getBody().id().toString();
+
+        ResponseEntity<Void> deleteResponse =
+                restTemplate.exchange(
+                        "/api/pessoas/" + id, HttpMethod.DELETE, entity(null, headers), Void.class);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<Map> getResponse =
+                restTemplate.exchange(
+                        "/api/pessoas/" + id, HttpMethod.GET, entity(null, headers), Map.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 
     @Test
     void blocksDeletionWithGenericConflictMessage() {

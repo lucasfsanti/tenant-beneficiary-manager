@@ -42,6 +42,52 @@ class BeneficiarioMatriculaUniquenessTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void rejectsUpdatingAMatriculaToOneAlreadyUsedByAnotherRecordInTheSameTenant() {
+        BeneficiarioInput first =
+                new BeneficiarioInput(
+                        UUID.fromString(PESSOA_ID),
+                        "MAT-UPD-001",
+                        BeneficiarioTipo.TITULAR,
+                        BeneficiarioStatus.ATIVO,
+                        null);
+        restTemplate.exchange(
+                "/api/beneficiarios",
+                HttpMethod.POST,
+                entity(first, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                BeneficiarioResponse.class);
+
+        BeneficiarioInput second =
+                new BeneficiarioInput(
+                        UUID.fromString(PESSOA_ID),
+                        "MAT-UPD-002",
+                        BeneficiarioTipo.TITULAR,
+                        BeneficiarioStatus.ATIVO,
+                        null);
+        ResponseEntity<BeneficiarioResponse> secondCreate =
+                restTemplate.exchange(
+                        "/api/beneficiarios",
+                        HttpMethod.POST,
+                        entity(second, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        BeneficiarioResponse.class);
+        UUID secondId = secondCreate.getBody().id();
+
+        BeneficiarioInput conflictingUpdate =
+                new BeneficiarioInput(
+                        UUID.fromString(PESSOA_ID),
+                        "MAT-UPD-001",
+                        BeneficiarioTipo.TITULAR,
+                        BeneficiarioStatus.ATIVO,
+                        null);
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios/" + secondId,
+                        HttpMethod.PUT,
+                        entity(conflictingUpdate, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
     void allowsSameMatriculaAcrossDifferentTenants() {
         BeneficiarioInput input =
                 new BeneficiarioInput(

@@ -23,4 +23,32 @@ class TenantIsolationTest extends AbstractIntegrationTest {
                         Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    void returns404WhenEditingARecordBelongingToAnotherTenant() {
+        Map<String, Object> updateInput =
+                Map.of(
+                        "pessoaId", "55555555-5555-5555-5555-555555555553",
+                        "matricula", "MAT-B-001",
+                        "tipo", "TITULAR",
+                        "status", "INATIVO");
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios/" + TENANT_BETA_BENEFICIARIO_ID,
+                        HttpMethod.PUT,
+                        entity(updateInput, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void returns404WhenDeletingARecordBelongingToAnotherTenant() {
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios/" + TENANT_BETA_BENEFICIARIO_ID,
+                        HttpMethod.DELETE,
+                        entity(null, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }

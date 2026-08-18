@@ -105,6 +105,114 @@ class PessoaIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void rejectsMissingCpfWithBadRequest() {
+        PessoaInput input = new PessoaInput("Sem CPF", null, null, null);
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/pessoas",
+                        org.springframework.http.HttpMethod.POST,
+                        entity(input, headers()),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listsPessoasWithoutANameFilter() {
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/pessoas",
+                        org.springframework.http.HttpMethod.GET,
+                        entity(null, headers()),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((java.util.List) response.getBody().get("content")).isNotEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listsPessoasWithABlankNameFilterSameAsUnfiltered() {
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/pessoas?nome=",
+                        org.springframework.http.HttpMethod.GET,
+                        entity(null, headers()),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((java.util.List) response.getBody().get("content")).isNotEmpty();
+    }
+
+    @Test
+    void updatingToAGenuinelyDifferentUnusedCpfSucceeds() {
+        PessoaInput input = new PessoaInput("Vai Trocar de CPF", "60216365031", null, null);
+        String id =
+                restTemplate
+                        .exchange(
+                                "/api/pessoas",
+                                org.springframework.http.HttpMethod.POST,
+                                entity(input, headers()),
+                                PessoaResponse.class)
+                        .getBody()
+                        .id()
+                        .toString();
+
+        PessoaInput updateInput = new PessoaInput("Vai Trocar de CPF", "78460055027", null, null);
+        ResponseEntity<PessoaResponse> response =
+                restTemplate.exchange(
+                        "/api/pessoas/" + id,
+                        org.springframework.http.HttpMethod.PUT,
+                        entity(updateInput, headers()),
+                        PessoaResponse.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().cpf()).isEqualTo("78460055027");
+
+        restTemplate.exchange(
+                "/api/pessoas/" + id, org.springframework.http.HttpMethod.DELETE, entity(null, headers()), Void.class);
+    }
+
+    @Test
+    void rejectsUpdateToADifferentAlreadyRegisteredCpf() {
+        PessoaInput firstInput = new PessoaInput("Titular Um", "39053344705", null, null);
+        String firstId =
+                restTemplate
+                        .exchange(
+                                "/api/pessoas",
+                                org.springframework.http.HttpMethod.POST,
+                                entity(firstInput, headers()),
+                                PessoaResponse.class)
+                        .getBody()
+                        .id()
+                        .toString();
+
+        PessoaInput secondInput = new PessoaInput("Titular Dois", "45745233877", null, null);
+        String secondId =
+                restTemplate
+                        .exchange(
+                                "/api/pessoas",
+                                org.springframework.http.HttpMethod.POST,
+                                entity(secondInput, headers()),
+                                PessoaResponse.class)
+                        .getBody()
+                        .id()
+                        .toString();
+
+        PessoaInput conflictingUpdate = new PessoaInput("Titular Dois", "39053344705", null, null);
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/pessoas/" + secondId,
+                        org.springframework.http.HttpMethod.PUT,
+                        entity(conflictingUpdate, headers()),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        // Cleanup.
+        restTemplate.exchange(
+                "/api/pessoas/" + firstId, org.springframework.http.HttpMethod.DELETE, entity(null, headers()), Void.class);
+        restTemplate.exchange(
+                "/api/pessoas/" + secondId, org.springframework.http.HttpMethod.DELETE, entity(null, headers()), Void.class);
+    }
+
+    @Test
     void acceptsOmittedOptionalFields() {
         PessoaInput input = new PessoaInput("Sem Opcionais", "54433221171", null, null);
         ResponseEntity<PessoaResponse> response =

@@ -40,6 +40,26 @@ class BeneficiarioCreationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void honorsAnExplicitlySuppliedDataAdesao() {
+        LocalDate explicitDate = LocalDate.of(2025, 6, 1);
+        BeneficiarioInput input =
+                new BeneficiarioInput(
+                        UUID.fromString(EXISTING_PESSOA_ID),
+                        "MAT-NEW-003",
+                        BeneficiarioTipo.TITULAR,
+                        BeneficiarioStatus.ATIVO,
+                        explicitDate);
+        ResponseEntity<BeneficiarioResponse> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios",
+                        HttpMethod.POST,
+                        entity(input, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        BeneficiarioResponse.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().dataAdesao()).isEqualTo(explicitDate);
+    }
+
+    @Test
     void rejectsCreationWhenPessoaDoesNotExist() {
         BeneficiarioInput input =
                 new BeneficiarioInput(

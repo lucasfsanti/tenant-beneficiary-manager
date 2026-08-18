@@ -23,6 +23,13 @@ class CpfValidatorTest {
     }
 
     @Test
+    void rejectsWrongFirstCheckDigitSpecifically() {
+        // "92239444657" with only the first (not second) check digit corrupted — distinct from
+        // rejectsWrongCheckDigit above, which only ever corrupts the second.
+        assertThat(validator.isValid("92239444667", null)).isFalse();
+    }
+
+    @Test
     void rejectsTooShort() {
         assertThat(validator.isValid("123456789", null)).isFalse();
     }

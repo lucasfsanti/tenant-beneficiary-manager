@@ -13,6 +13,12 @@ class BeneficiarioValidationTest extends AbstractIntegrationTest {
     private static final String PESSOA_ID = "55555555-5555-5555-5555-555555555554";
 
     @Test
+    void rejectsMissingPessoaId() {
+        Map<String, Object> body = Map.of("matricula", "MAT-VAL-000", "tipo", "TITULAR", "status", "ATIVO");
+        assertBadRequest(body);
+    }
+
+    @Test
     void rejectsMissingMatricula() {
         Map<String, Object> body = Map.of("pessoaId", PESSOA_ID, "tipo", "TITULAR", "status", "ATIVO");
         assertBadRequest(body);
