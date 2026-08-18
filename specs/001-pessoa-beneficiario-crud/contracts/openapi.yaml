@@ -1,0 +1,401 @@
+openapi: 3.0.3
+info:
+  title: Tenant Beneficiary Manager API
+  version: "1.0"
+  description: >
+    Design-time contract for Phase 1 planning. The authoritative, always-in-sync copy of this
+    contract is generated at runtime by springdoc-openapi from the implementation
+    (Constitution Principle III) and served at /swagger-ui.html and /v3/api-docs.
+servers:
+  - url: /api
+
+paths:
+  /auth/login:
+    post:
+      summary: Simplified login for a pre-seeded demo user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, description: "JWT bearer token" }
+                  user: { $ref: "#/components/schemas/UserProfile" }
+        "401":
+          description: Invalid credentials
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /me:
+    get:
+      summary: Current authenticated user, including tenant memberships
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+
+  /pessoas:
+    get:
+      summary: List Pessoa records (global, not tenant-scoped)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: nome
+          schema: { type: string }
+          description: Optional partial-name filter on nome
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Paginated Pessoa list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PessoaPage" }
+    post:
+      summary: Create a Pessoa
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PessoaInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pessoa" }
+        "400":
+          description: Validation failure (e.g., invalid CPF, missing nome)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "409":
+          description: CPF already registered
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /pessoas/{pessoaId}:
+    parameters:
+      - in: path
+        name: pessoaId
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Get a Pessoa by id
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pessoa" }
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    put:
+      summary: Update a Pessoa
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PessoaInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pessoa" }
+        "400":
+          description: Validation failure
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    delete:
+      summary: Delete a Pessoa (blocked if referenced by any Beneficiário)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "409":
+          description: Still referenced by at least one Beneficiário
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /beneficiarios:
+    get:
+      summary: List Beneficiário records scoped to the active tenant (X-Tenant-Id header)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+        - in: query
+          name: pessoaNome
+          schema: { type: string }
+          description: Optional partial-name filter on the linked Pessoa's nome
+        - in: query
+          name: status
+          schema: { $ref: "#/components/schemas/BeneficiarioStatus" }
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Paginated Beneficiário list, scoped to the active tenant only
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BeneficiarioPage" }
+        "403":
+          description: X-Tenant-Id is not one of the caller's memberships
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    post:
+      summary: Create a Beneficiário in the active tenant
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/TenantHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BeneficiarioInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Beneficiario" }
+        "400":
+          description: Validation failure or referenced Pessoa does not exist
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "403":
+          description: X-Tenant-Id is not one of the caller's memberships
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "409":
+          description: Duplicate matrícula within the active tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /beneficiarios/{beneficiarioId}:
+    parameters:
+      - in: path
+        name: beneficiarioId
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "#/components/parameters/TenantHeader"
+    get:
+      summary: Get a Beneficiário by id (only if it belongs to the active tenant)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Beneficiario" }
+        "404":
+          description: >
+            Not found — returned both when the id does not exist and when it belongs to a
+            different tenant (FR-011: no confirmation that a cross-tenant record exists).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    put:
+      summary: Update a Beneficiário (only if it belongs to the active tenant)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BeneficiarioInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Beneficiario" }
+        "400":
+          description: Validation failure
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "404":
+          description: Not found (or belongs to a different tenant)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "409":
+          description: Duplicate matrícula within the active tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    delete:
+      summary: Delete a Beneficiário (only if it belongs to the active tenant)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found (or belongs to a different tenant)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantHeader:
+      in: header
+      name: X-Tenant-Id
+      required: true
+      schema: { type: string, format: uuid }
+      description: The tenant to operate as; MUST be one of the caller's memberships (FR-021)
+
+  schemas:
+    ProblemDetail:
+      type: object
+      description: RFC 7807 Problem Details, with a field-level `errors` extension for validation failures
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        tenants:
+          type: array
+          items: { $ref: "#/components/schemas/Tenant" }
+
+    Tenant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    PessoaInput:
+      type: object
+      required: [nome, cpf]
+      properties:
+        nome: { type: string }
+        cpf: { type: string, description: "11-digit Brazilian CPF" }
+        dataNascimento: { type: string, format: date, nullable: true, description: "Optional" }
+        email: { type: string, format: email, nullable: true, description: "Optional" }
+
+    Pessoa:
+      allOf:
+        - $ref: "#/components/schemas/PessoaInput"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+
+    PessoaPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: "#/components/schemas/Pessoa" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+
+    BeneficiarioStatus:
+      type: string
+      enum: [ATIVO, INATIVO]
+
+    BeneficiarioTipo:
+      type: string
+      enum: [TITULAR, DEPENDENTE]
+
+    BeneficiarioInput:
+      type: object
+      required: [pessoaId, matricula, tipo, status]
+      properties:
+        pessoaId: { type: string, format: uuid, description: "Vincula a uma Pessoa global existente" }
+        matricula: { type: string, description: "Única dentro do tenant" }
+        tipo: { $ref: "#/components/schemas/BeneficiarioTipo" }
+        status: { $ref: "#/components/schemas/BeneficiarioStatus" }
+        dataAdesao: { type: string, format: date, nullable: true, description: "Optional; defaults to the record's creation date if omitted" }
+
+    Beneficiario:
+      allOf:
+        - $ref: "#/components/schemas/BeneficiarioInput"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            tenantId: { type: string, format: uuid, description: "Implícito pelo contexto da requisição — server-resolved from X-Tenant-Id, never accepted from the request body on create/update" }
+            pessoaNome: { type: string, description: "Denormalized for listing convenience only" }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+
+    BeneficiarioPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: "#/components/schemas/Beneficiario" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
