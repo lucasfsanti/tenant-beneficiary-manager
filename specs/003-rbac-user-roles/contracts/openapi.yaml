@@ -1,0 +1,373 @@
+openapi: 3.0.3
+info:
+  title: Tenant Beneficiary Manager API — Role-Based Access additions
+  version: "1.0"
+  description: >
+    Design-time contract for Phase 1 planning of 003-rbac-user-roles. Covers only
+    endpoints that are new or change shape in this feature — see
+    specs/001-pessoa-beneficiario-crud/contracts/openapi.yaml for everything else
+    (Pessoa, Beneficiário, auth/login). The authoritative, always-in-sync copy of
+    the full contract is generated at runtime by springdoc-openapi (Constitution
+    Principle III) and served at /swagger-ui.html and /v3/api-docs.
+servers:
+  - url: /api
+
+paths:
+  /me:
+    get:
+      summary: Current authenticated user, including tenant memberships (extended — now includes role standing)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+
+  /tenants:
+    get:
+      summary: List all tenants (System Admin only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Tenant" }
+        "403":
+          description: Caller does not hold System Admin standing
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    post:
+      summary: Create a Tenant (System Admin only) — FR-002
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TenantInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tenant" }
+        "400":
+          description: Validation failure (e.g., missing/duplicate name)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "403":
+          description: Caller does not hold System Admin standing — FR-004
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /tenants/{tenantId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Get a Tenant (System Admin, or Tenant Admin of this tenant)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tenant" }
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "404":
+          description: Not found
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    put:
+      summary: Update a Tenant's own attributes (System Admin, or Tenant Admin of this tenant) — FR-004, FR-005(b)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TenantInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Tenant" }
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    delete:
+      summary: Delete a Tenant (System Admin only) — FR-002, FR-004
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Blocked — still referenced by at least one Beneficiário record or membership (FR-003)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "403":
+          description: Caller does not hold System Admin standing — FR-004
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /tenants/{tenantId}/members:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: List a tenant's members and their standing (System Admin, or Tenant Admin of this tenant)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MemberResponse" }
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    post:
+      summary: Add an existing user's membership to this tenant — FR-005(a)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddMemberRequest" }
+      responses:
+        "201":
+          description: Membership created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemberResponse" }
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "404":
+          description: Referenced user does not exist
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /tenants/{tenantId}/members/{userId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema: { type: string, format: uuid }
+      - in: path
+        name: userId
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      summary: Remove a user's membership from this tenant — FR-005(a)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Membership removed
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /tenants/{tenantId}/members/{userId}/tenant-admin:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema: { type: string, format: uuid }
+      - in: path
+        name: userId
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      summary: Grant Tenant Admin standing for this tenant — FR-005(c). Idempotent if already held.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Granted (or already held — no-op)
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "404":
+          description: userId is not a member of this tenant — granting does not itself create membership (FR-005(c))
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    delete:
+      summary: Revoke Tenant Admin standing for this tenant — FR-005(c). Idempotent if not held.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Revoked (or already not held — no-op)
+        "403":
+          description: Caller holds neither System Admin nor Tenant Admin standing for this tenant
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /users:
+    get:
+      summary: Look up an existing user by exact username (member picker) — research.md §6
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK (empty array if no match)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserSummary" }
+
+  /users/{userId}/system-admin:
+    parameters:
+      - in: path
+        name: userId
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      summary: Grant System Admin standing (System Admin only, incl. self) — FR-014. Idempotent if already held.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Granted (or already held — no-op)
+        "403":
+          description: Caller does not hold System Admin standing
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "404":
+          description: userId does not exist
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+    delete:
+      summary: Revoke System Admin standing (System Admin only, incl. self) — FR-014. Idempotent if not held.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Revoked (or already not held — no-op)
+        "404":
+          description: userId does not exist
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "400":
+          description: Blocked — this is the platform's last remaining System Admin (FR-011)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "403":
+          description: Caller does not hold System Admin standing
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ProblemDetail:
+      type: object
+      description: RFC 7807 Problem Details, with a field-level `errors` extension for validation failures
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    Tenant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    TenantInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    UserProfile:
+      type: object
+      description: Extended — adds isSystemAdmin; each nested Tenant now also carries isTenantAdmin
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        isSystemAdmin: { type: boolean }
+        tenants:
+          type: array
+          items: { $ref: "#/components/schemas/TenantSummary" }
+
+    TenantSummary:
+      type: object
+      description: Tenant, plus the caller's own standing within it
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        isTenantAdmin: { type: boolean }
+
+    MemberResponse:
+      type: object
+      description: Another member's standing within the tenant being viewed
+      properties:
+        userId: { type: string, format: uuid }
+        username: { type: string }
+        isTenantAdmin: { type: boolean }
+
+    AddMemberRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: string, format: uuid }
+
+    UserSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
