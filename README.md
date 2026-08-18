@@ -27,10 +27,11 @@ partir do código pelo springdoc-openapi) em `http://localhost:8080/swagger-ui.h
 
 ### Usuários de demonstração (seed)
 
-| Usuário | Senha     | Tenants                    |
-|---------|-----------|-----------------------------|
-| `ana`   | `demo123` | Tenant Alfa e Tenant Beta   |
-| `bruno` | `demo123` | Tenant Alfa                 |
+| Usuário | Senha     | Tenants                    | Papel                              |
+|---------|-----------|-----------------------------|-------------------------------------|
+| `admin` | `demo123` | nenhum                      | System Admin (plataforma inteira)   |
+| `ana`   | `demo123` | Tenant Alfa e Tenant Beta   | Normal em ambos                     |
+| `bruno` | `demo123` | Tenant Alfa                 | Tenant Admin do Tenant Alfa         |
 
 ### Rodando os testes localmente (sem Docker Compose)
 
@@ -66,6 +67,39 @@ de "um banco global com Pessoa/tenants/usuários" — Pessoa precisaria viver em
 compartilhado de qualquer forma. Para a escala deste exercício (poucos tenants, dezenas/centenas
 de registros), a coluna discriminadora é a opção mais simples que ainda concentra o reforço do
 isolamento em um único ponto auditável.
+
+### Controle de acesso por papéis
+
+Três níveis, aditivos, sem novo mecanismo de autorização (sem `@PreAuthorize`) —
+seguem o mesmo padrão já usado para regras de negócio: checagem manual na camada
+de serviço, lançando uma exceção tipada mapeada para RFC 7807.
+
+- **System Admin** (`app_user.is_system_admin`, plataforma inteira, independente
+  de qualquer membership): CRUD completo de Tenants; concede/revoga o status de
+  System Admin de qualquer usuário (inclusive o próprio, exceto quando seria o
+  último — ver abaixo); tem toda ação de Tenant Admin e de usuário Normal, em
+  qualquer tenant.
+- **Tenant Admin** (`user_tenant_membership.is_tenant_admin`, por membership —
+  um usuário pode ser Tenant Admin de um tenant e não de outro): adiciona/remove
+  membros do seu próprio tenant; edita o nome do seu próprio tenant; concede/
+  revoga o status de Tenant Admin de outro membro do mesmo tenant (inclusive o
+  próprio) — nunca cria nem apaga o Tenant em si, e nunca age fora do tenant
+  onde tem esse status.
+- **Normal** (padrão de qualquer membership sem status elevado): comportamento
+  inalterado desde `001` — Pessoa (global) e Beneficiário (do tenant ativo).
+
+Toda checagem de autorização é resolvida **a cada requisição**, direto do banco
+(nunca de uma claim do JWT), pelo mesmo motivo que `TenantContextFilter` já
+revalida membership a cada requisição: o status pode mudar durante uma sessão já
+autenticada, e o efeito precisa ser imediato, sem exigir novo login.
+
+A proteção "a plataforma nunca fica sem nenhum System Admin" (`FR-011`) é
+garantida sob concorrência: revogar o penúltimo/último System Admin trava
+(`SELECT ... FOR UPDATE`) o conjunto inteiro de usuários com esse status antes de
+recontá-los e escrever, dentro da mesma transação — travar apenas a linha alvo
+não bastaria, pois duas revogações concorrentes contra dois administradores
+*diferentes* poderiam cada uma travar uma linha distinta e nenhuma bloquear a
+outra.
 
 ### Autenticação simplificada
 
