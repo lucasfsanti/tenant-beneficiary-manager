@@ -38,6 +38,17 @@ export const useAuthStore = defineStore('auth', {
         return false
       }
     },
+    async register(username, password) {
+      this.error = null
+      try {
+        await axios.post('/api/auth/register', { username, password })
+        return true
+      } catch (err) {
+        this.error =
+          err.response?.data?.detail || 'Não foi possível criar a conta. Tente novamente.'
+        return false
+      }
+    },
     async fetchProfile() {
       if (!this.token) return
       try {

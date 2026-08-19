@@ -3,15 +3,18 @@ package com.tbm.user;
 import com.tbm.security.JwtService;
 import com.tbm.user.dto.LoginRequest;
 import com.tbm.user.dto.LoginResponse;
+import com.tbm.user.dto.RegisterRequest;
 import com.tbm.user.dto.UserProfile;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -28,6 +31,12 @@ public class AuthController {
     @PostMapping("/auth/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request.username(), request.password());
+    }
+
+    @PostMapping("/auth/register")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request.username(), request.password());
     }
 
     @GetMapping("/me")

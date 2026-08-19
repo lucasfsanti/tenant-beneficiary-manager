@@ -44,12 +44,24 @@ aparecer para o usuário logado.
 
 Por padrão (`docker compose up`, sem nenhum passo extra) os dados acima são inseridos
 automaticamente (perfil Spring `demo`). Para subir a aplicação com o banco totalmente migrado mas
-**sem** nenhum dado de demonstração (nenhum login possível, já que hoje não existe outra forma de
-criar uma conta), use o perfil `no-demo`:
+**sem** nenhum dado de demonstração, use o perfil `no-demo`:
 
 ```bash
 SPRING_PROFILES_ACTIVE=no-demo docker compose up
 ```
+
+Mesmo nesse modo, é possível entrar no sistema — veja "Criando a primeira conta" abaixo.
+
+#### Criando a primeira conta
+
+A tela `/criar-conta` (acessível sem login) é o ponto de entrada para uma instância sem nenhum
+usuário: a primeira conta criada por ela é automaticamente promovida a System Admin, sem
+nenhuma escolha de papel — é a única opção que faz sentido quando ainda não existe nenhum Tenant.
+A partir da segunda conta em diante, toda conta criada por essa tela nasce com o papel mais
+simples (Normal, sem vínculo a nenhum Tenant); elevar esse papel exige uma ação de um
+administrador já existente através das capacidades administrativas já existentes (conceder
+System Admin ou Tenant Admin, adicionar a um Tenant) — nunca através da própria tela de criação de
+conta, mesmo que a requisição tente sugerir isso.
 
 ### Rodando os testes localmente (sem Docker Compose)
 

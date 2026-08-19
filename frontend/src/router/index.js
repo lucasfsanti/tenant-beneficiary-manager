@@ -10,6 +10,12 @@ const routes = [
     meta: { public: true }
   },
   {
+    path: '/criar-conta',
+    name: 'create-user',
+    component: () => import('../views/CreateUserView.vue'),
+    meta: { public: true }
+  },
+  {
     path: '/pessoas',
     name: 'pessoas-list',
     component: () => import('../views/PessoaListView.vue')
