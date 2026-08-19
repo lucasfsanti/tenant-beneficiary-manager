@@ -16,7 +16,8 @@ import org.springframework.http.ResponseEntity;
 
 class BeneficiarioCreationTest extends AbstractIntegrationTest {
 
-    /** Seeded Pessoa (V2__seed_demo_data.sql) with no pre-existing Beneficiario in Tenant Alfa. */
+    /** Seeded Pessoa ("Pessoa 4" as of 005-seed-data-relabel-and-expand.sql) with no pre-existing
+     * Beneficiario in Tenant 1. */
     private static final String EXISTING_PESSOA_ID = "55555555-5555-5555-5555-555555555554";
 
     @Test

@@ -11,7 +11,8 @@ import org.springframework.http.ResponseEntity;
 
 class SystemAdminGrantRevokeTest extends AbstractIntegrationTest {
 
-    /** Seeded (V2__seed_demo_data.sql) Pessoa-unrelated Normal-tier user, promoted/demoted in these tests. */
+    /** Seeded (002-seed-demo-data.sql) Pessoa-unrelated Normal-tier user ("User 1 - NORMAL" as of
+     * 005-seed-data-relabel-and-expand.sql), promoted/demoted in these tests. */
     private static final String ANA_ID = "33333333-3333-3333-3333-333333333333";
 
     private static final String ADMIN_ID = "77777777-7777-7777-7777-777777777777";

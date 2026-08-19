@@ -101,7 +101,7 @@ class TenantCrudTest extends AbstractIntegrationTest {
     void tenantAdminIsDeniedCreateListAllAndDelete() {
         Map<String, String> input = Map.of("name", "Should Not Be Created " + UUID.randomUUID());
 
-        // bruno is Tenant Admin of Tenant Alfa — still no create/list-all/delete standing.
+        // bruno (User 2 - TENANT ADMIN) is Tenant Admin of Tenant 1 — still no create/list-all/delete standing.
         assertForbidden(
                 restTemplate.exchange(
                         "/api/tenants",

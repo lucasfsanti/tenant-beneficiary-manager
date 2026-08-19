@@ -2,6 +2,12 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    # Demo-data seeding (Liquibase changesets tagged context:demo) is active by default so the
+    # documented docker-compose/local startup keeps working with zero extra steps. Override with
+    # SPRING_PROFILES_ACTIVE=no-demo to start with a clean, demo-data-free database (spec
+    # 005-seed-data-relabel FR-014/015).
+    active: demo
   application:
     name: tenant-beneficiary-manager
   datasource:
@@ -18,6 +24,12 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Must always be explicitly set (never left null): an unset/null contexts value makes
+    # Liquibase apply NO context filtering at all, running every changeset regardless of its
+    # context tag — the opposite of what's needed here. "no-demo-data" is a sentinel that never
+    # matches any changeset's context:demo tag, so context:demo changesets are skipped by default
+    # (overridden to "demo" below when that profile is active).
+    contexts: no-demo-data
 
 app:
   jwt:
@@ -44,3 +56,23 @@ management:
 logging:
   level:
     com.tbm: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: demo
+  liquibase:
+    contexts: demo
+
+---
+spring:
+  config:
+    activate:
+      on-profile: no-demo
+  # No-op: the base document's "no-demo-data" sentinel already skips context:demo changesets by
+  # default. This document exists so "no-demo" is a real, named profile (self-documenting in
+  # logs and docker-compose usage) rather than relying on callers to know that any non-"demo"
+  # profile happens to produce the same effect.
+  liquibase:
+    contexts: no-demo-data

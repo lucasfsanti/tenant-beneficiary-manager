@@ -36,7 +36,7 @@ class TenantAdminGrantRevokeTest extends AbstractIntegrationTest {
 
     @Test
     void grantToNonMemberReturnsNotFoundWithoutCreatingMembership() {
-        // admin holds no membership in Tenant Alfa at all.
+        // admin (User 3 - ADMIN) holds no membership in Tenant 1 at all.
         put(TENANT_ALFA_ID, ADMIN_ID, BRUNO_USERNAME, BRUNO_PASSWORD, HttpStatus.NOT_FOUND);
 
         ResponseEntity<List> members =
@@ -61,7 +61,7 @@ class TenantAdminGrantRevokeTest extends AbstractIntegrationTest {
 
     @Test
     void grantRevokeAgainstAnotherTenantIsDenied() {
-        // bruno has no standing at all in Tenant Beta.
+        // bruno (User 2 - TENANT ADMIN) has no standing at all in Tenant 2.
         put(TENANT_BETA_ID, ANA_ID, BRUNO_USERNAME, BRUNO_PASSWORD, HttpStatus.FORBIDDEN);
         delete(TENANT_BETA_ID, ANA_ID, BRUNO_USERNAME, BRUNO_PASSWORD, HttpStatus.FORBIDDEN);
     }

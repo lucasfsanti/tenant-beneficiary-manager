@@ -8,3 +8,9 @@ databaseChangeLog:
   - include:
       file: db/changelog/003-role-system.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/004-role-system-seed-data.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/005-seed-data-relabel-and-expand.sql
+      relativeToChangelogFile: false

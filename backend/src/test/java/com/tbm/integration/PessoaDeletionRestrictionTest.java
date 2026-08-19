@@ -13,7 +13,8 @@ import org.springframework.http.ResponseEntity;
 
 class PessoaDeletionRestrictionTest extends AbstractIntegrationTest {
 
-    /** Seeded Pessoa (V2__seed_demo_data.sql) referenced by Beneficiario rows in both tenants. */
+    /** Seeded Pessoa ("Pessoa 1" as of 005-seed-data-relabel-and-expand.sql) referenced by
+     * Beneficiario rows in both Tenant 1 and Tenant 2. */
     private static final String REFERENCED_PESSOA_ID = "55555555-5555-5555-5555-555555555551";
 
     @Test
@@ -54,8 +55,8 @@ class PessoaDeletionRestrictionTest extends AbstractIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         String detail = (String) response.getBody().get("detail");
         assertThat(detail).isNotBlank();
-        assertThat(detail.toLowerCase()).doesNotContain("tenant alfa");
-        assertThat(detail.toLowerCase()).doesNotContain("tenant beta");
+        assertThat(detail.toLowerCase()).doesNotContain("tenant 1");
+        assertThat(detail.toLowerCase()).doesNotContain("tenant 2");
         assertThat(detail).doesNotContain("11111111-1111-1111-1111-111111111111");
         assertThat(detail).doesNotContain("22222222-2222-2222-2222-222222222222");
     }

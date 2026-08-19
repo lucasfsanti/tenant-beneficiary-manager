@@ -11,7 +11,7 @@ Pré-requisitos: Docker e Docker Compose. Nenhuma outra ferramenta é necessári
 manual de banco de dados, migração ou seed.
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 Isso sobe três serviços:
@@ -27,11 +27,29 @@ partir do código pelo springdoc-openapi) em `http://localhost:8080/swagger-ui.h
 
 ### Usuários de demonstração (seed)
 
-| Usuário | Senha     | Tenants                    | Papel                              |
-|---------|-----------|-----------------------------|-------------------------------------|
-| `admin` | `demo123` | nenhum                      | System Admin (plataforma inteira)   |
-| `ana`   | `demo123` | Tenant Alfa e Tenant Beta   | Normal em ambos                     |
-| `bruno` | `demo123` | Tenant Alfa                 | Tenant Admin do Tenant Alfa         |
+Os nomes seguem um padrão previsível (`Tenant N`, `User N - PAPEL`, `Pessoa N`,
+`Beneficiário N - Tenant M`) para deixar claro, ao olhar a tela, se um registro deveria ou não
+aparecer para o usuário logado.
+
+| Usuário                 | Senha     | Tenants             | Papel                             |
+|-------------------------|-----------|---------------------|-----------------------------------|
+| `User 3 - ADMIN`        | `demo123` | nenhum              | System Admin (plataforma inteira) |
+| `User 1 - NORMAL`       | `demo123` | Tenant 1 e Tenant 2 | Normal em ambos                   |
+| `User 2 - TENANT ADMIN` | `demo123` | Tenant 1            | Tenant Admin do Tenant 1          |
+| `User 4 - TENANT ADMIN` | `demo123` | Tenant 3            | Tenant Admin do Tenant 3          |
+| `User 5 - NORMAL`       | `demo123` | Tenant 3 e Tenant 4 | Normal em ambos                   |
+| `User 6 - NORMAL`       | `demo123` | Tenant 2            | Normal                            |
+
+#### Seed de demonstração é opcional
+
+Por padrão (`docker compose up`, sem nenhum passo extra) os dados acima são inseridos
+automaticamente (perfil Spring `demo`). Para subir a aplicação com o banco totalmente migrado mas
+**sem** nenhum dado de demonstração (nenhum login possível, já que hoje não existe outra forma de
+criar uma conta), use o perfil `no-demo`:
+
+```bash
+SPRING_PROFILES_ACTIVE=no-demo docker compose up
+```
 
 ### Rodando os testes localmente (sem Docker Compose)
 

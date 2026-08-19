@@ -12,20 +12,23 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
-    /** Seeded (V2__seed_demo_data.sql) multi-tenant demo user. */
-    protected static final String ANA_USERNAME = "ana";
+    /** Seeded (002-seed-demo-data.sql) multi-tenant demo user, renamed to "User 1 - NORMAL" by
+     * 005-seed-data-relabel-and-expand.sql. Field name kept as ANA_USERNAME for minimal churn. */
+    protected static final String ANA_USERNAME = "User 1 - NORMAL";
 
     protected static final String ANA_PASSWORD = "demo123";
     protected static final String TENANT_ALFA_ID = "11111111-1111-1111-1111-111111111111";
     protected static final String TENANT_BETA_ID = "22222222-2222-2222-2222-222222222222";
 
-    /** Seeded (003-role-system.sql) Tenant Admin of Tenant Alfa only. */
-    protected static final String BRUNO_USERNAME = "bruno";
+    /** Seeded (004-role-system-seed-data.sql) Tenant Admin of Tenant 1 only, renamed to "User 2
+     * - TENANT ADMIN" by 005-seed-data-relabel-and-expand.sql. */
+    protected static final String BRUNO_USERNAME = "User 2 - TENANT ADMIN";
 
     protected static final String BRUNO_PASSWORD = "demo123";
 
-    /** Seeded (003-role-system.sql) platform-wide System Admin, no tenant memberships. */
-    protected static final String ADMIN_USERNAME = "admin";
+    /** Seeded (004-role-system-seed-data.sql) platform-wide System Admin, no tenant memberships,
+     * renamed to "User 3 - ADMIN" by 005-seed-data-relabel-and-expand.sql. */
+    protected static final String ADMIN_USERNAME = "User 3 - ADMIN";
 
     protected static final String ADMIN_PASSWORD = "demo123";
 

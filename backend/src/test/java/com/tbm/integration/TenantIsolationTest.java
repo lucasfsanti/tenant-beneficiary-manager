@@ -10,7 +10,8 @@ import org.springframework.http.ResponseEntity;
 
 class TenantIsolationTest extends AbstractIntegrationTest {
 
-    /** Seeded Beneficiario (V2__seed_demo_data.sql) that belongs to Tenant Beta, not Tenant Alfa. */
+    /** Seeded Beneficiario ("Beneficiário 1 - Tenant 2" as of 005-seed-data-relabel-and-expand.sql)
+     * that belongs to Tenant 2, not Tenant 1. */
     private static final String TENANT_BETA_BENEFICIARIO_ID = "66666666-6666-6666-6666-666666666663";
 
     @Test
@@ -29,7 +30,7 @@ class TenantIsolationTest extends AbstractIntegrationTest {
         Map<String, Object> updateInput =
                 Map.of(
                         "pessoaId", "55555555-5555-5555-5555-555555555553",
-                        "matricula", "MAT-B-001",
+                        "matricula", "Beneficiário 1 - Tenant 2",
                         "tipo", "TITULAR",
                         "status", "INATIVO");
         ResponseEntity<Map> response =

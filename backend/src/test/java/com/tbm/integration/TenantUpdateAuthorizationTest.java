@@ -13,24 +13,24 @@ class TenantUpdateAuthorizationTest extends AbstractIntegrationTest {
 
     @Test
     void tenantAdminCanUpdateTheirOwnTenantsName() {
-        String newName = "Tenant Alfa Renomeado " + UUID.randomUUID();
+        String newName = "Tenant 1 Renomeado " + UUID.randomUUID();
         try {
             ResponseEntity<Map> response = update(TENANT_ALFA_ID, newName, BRUNO_USERNAME, BRUNO_PASSWORD);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody().get("name")).isEqualTo(newName);
         } finally {
-            update(TENANT_ALFA_ID, "Tenant Alfa", ADMIN_USERNAME, ADMIN_PASSWORD);
+            update(TENANT_ALFA_ID, "Tenant 1", ADMIN_USERNAME, ADMIN_PASSWORD);
         }
     }
 
     @Test
     void systemAdminCanUpdateAnyTenantsName() {
-        String newName = "Tenant Alfa Renomeado " + UUID.randomUUID();
+        String newName = "Tenant 1 Renomeado " + UUID.randomUUID();
         try {
             ResponseEntity<Map> response = update(TENANT_ALFA_ID, newName, ADMIN_USERNAME, ADMIN_PASSWORD);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         } finally {
-            update(TENANT_ALFA_ID, "Tenant Alfa", ADMIN_USERNAME, ADMIN_PASSWORD);
+            update(TENANT_ALFA_ID, "Tenant 1", ADMIN_USERNAME, ADMIN_PASSWORD);
         }
     }
 
@@ -42,7 +42,7 @@ class TenantUpdateAuthorizationTest extends AbstractIntegrationTest {
 
     @Test
     void callerWithNoStandingForThisTenantIsDenied() {
-        // bruno has no standing at all for Tenant Beta.
+        // bruno has no standing at all for Tenant 2.
         ResponseEntity<Map> response = update(TENANT_BETA_ID, "Should Not Apply", BRUNO_USERNAME, BRUNO_PASSWORD);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }

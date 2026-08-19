@@ -94,7 +94,7 @@ class MembershipManagementTest extends AbstractIntegrationTest {
 
     @Test
     void removingAMembershipRevokesBeneficiarioAccessImmediately() {
-        // ana is a genuine Normal-tier member of Tenant Alfa (seed data) — removing her
+        // ana (User 1 - NORMAL) is a genuine Normal-tier member of Tenant 1 (seed data) — removing her
         // membership must deny her the very next request, not just return 204 (US2/AC2).
         try {
             ResponseEntity<Void> removeResponse =

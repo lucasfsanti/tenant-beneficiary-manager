@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset tbm:2
+--changeset tbm:2 context:demo
 -- Demo tenants
 INSERT INTO tenant (id, nome, created_at) VALUES
     ('11111111-1111-1111-1111-111111111111', 'Tenant Alfa', now()),

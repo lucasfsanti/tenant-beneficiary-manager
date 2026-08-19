@@ -16,14 +16,14 @@ class BeneficiarioFilteringTest extends AbstractIntegrationTest {
     void filtersByPessoaNome() {
         ResponseEntity<Map> response =
                 restTemplate.exchange(
-                        "/api/beneficiarios?pessoaNome=Maria",
+                        "/api/beneficiarios?pessoaNome=Pessoa 1",
                         HttpMethod.GET,
                         entity(null, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
                         Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().get("content");
         assertThat(content).isNotEmpty();
-        assertThat(content).allMatch(item -> ((String) item.get("pessoaNome")).contains("Maria"));
+        assertThat(content).allMatch(item -> ((String) item.get("pessoaNome")).contains("Pessoa 1"));
     }
 
     @Test
@@ -46,7 +46,7 @@ class BeneficiarioFilteringTest extends AbstractIntegrationTest {
     void combinesNameAndStatusFilters() {
         ResponseEntity<Map> response =
                 restTemplate.exchange(
-                        "/api/beneficiarios?pessoaNome=Maria&status=ATIVO",
+                        "/api/beneficiarios?pessoaNome=Pessoa 1&status=ATIVO",
                         HttpMethod.GET,
                         entity(null, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
                         Map.class);
@@ -55,7 +55,7 @@ class BeneficiarioFilteringTest extends AbstractIntegrationTest {
         assertThat(content)
                 .allMatch(
                         item ->
-                                ((String) item.get("pessoaNome")).contains("Maria")
+                                ((String) item.get("pessoaNome")).contains("Pessoa 1")
                                         && "ATIVO".equals(item.get("status")));
     }
 

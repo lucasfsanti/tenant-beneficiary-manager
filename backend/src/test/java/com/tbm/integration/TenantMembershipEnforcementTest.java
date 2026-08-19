@@ -11,10 +11,11 @@ import org.springframework.http.ResponseEntity;
 
 class TenantMembershipEnforcementTest extends AbstractIntegrationTest {
 
-    private static final String BRUNO_USERNAME = "bruno";
+    private static final String BRUNO_USERNAME = "User 2 - TENANT ADMIN";
     private static final String BRUNO_PASSWORD = "demo123";
 
-    /** bruno (seed data) is a member of Tenant Alfa only, not Tenant Beta. */
+    /** bruno ("User 2 - TENANT ADMIN" as of 005-seed-data-relabel-and-expand.sql) is a member of
+     * Tenant 1 only, not Tenant 2. */
     @Test
     void rejectsTenantHeaderNotInCallersMemberships() {
         ResponseEntity<Map> response =
