@@ -5,22 +5,15 @@
     <ErrorBanner v-if="store.problem" :problem="store.problem" />
 
     <form @submit.prevent="handleSubmit">
-      <label for="pessoaBusca">Buscar Pessoa por nome</label>
-      <input
-        id="pessoaBusca"
-        v-model="pessoaBusca"
-        type="text"
-        placeholder="Digite para buscar..."
-        @input="onPessoaSearch"
-      />
-
       <label for="pessoaId">Pessoa</label>
-      <select id="pessoaId" v-model="form.pessoaId" required>
-        <option value="" disabled>Selecione uma pessoa</option>
-        <option v-for="pessoa in pessoaOptions" :key="pessoa.id" :value="pessoa.id">
-          {{ pessoa.nome }} ({{ pessoa.cpf }})
-        </option>
-      </select>
+      <SearchableSelect
+        id="pessoaId"
+        v-model="form.pessoaId"
+        :search="searchPessoas"
+        :option-label="pessoaOptionLabel"
+        :initial-label="pessoaInitialLabel"
+        placeholder="Digite para buscar uma pessoa..."
+      />
 
       <label for="matricula">Matrícula</label>
       <input id="matricula" v-model="form.matricula" type="text" required />
@@ -57,6 +50,7 @@ import { useBeneficiarioStore } from '../stores/beneficiario'
 import beneficiarioApi from '../services/beneficiarioApi'
 import pessoaApi from '../services/pessoaApi'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 
 const props = defineProps({
   id: { type: String, default: null }
@@ -66,9 +60,7 @@ const isEdit = computed(() => !!props.id)
 const store = useBeneficiarioStore()
 const router = useRouter()
 const saving = ref(false)
-const pessoaBusca = ref('')
-const pessoaOptions = ref([])
-let debounceHandle = null
+const pessoaInitialLabel = ref('')
 
 const form = reactive({
   pessoaId: '',
@@ -78,18 +70,16 @@ const form = reactive({
   dataAdesao: ''
 })
 
-async function searchPessoas() {
-  const response = await pessoaApi.list({ nome: pessoaBusca.value, size: 20 })
-  pessoaOptions.value = response.data.content
+async function searchPessoas(nome) {
+  const response = await pessoaApi.list({ nome, size: 20 })
+  return response.data.content
 }
 
-function onPessoaSearch() {
-  clearTimeout(debounceHandle)
-  debounceHandle = setTimeout(searchPessoas, 300)
+function pessoaOptionLabel(pessoa) {
+  return `${pessoa.nome} (${pessoa.cpf})`
 }
 
 onMounted(async () => {
-  await searchPessoas()
   if (isEdit.value) {
     const response = await beneficiarioApi.get(props.id)
     form.pessoaId = response.data.pessoaId
@@ -97,16 +87,14 @@ onMounted(async () => {
     form.tipo = response.data.tipo
     form.status = response.data.status
     form.dataAdesao = response.data.dataAdesao || ''
-    if (!pessoaOptions.value.find((p) => p.id === form.pessoaId)) {
-      pessoaOptions.value = [
-        { id: form.pessoaId, nome: response.data.pessoaNome, cpf: '' },
-        ...pessoaOptions.value
-      ]
-    }
+    pessoaInitialLabel.value = response.data.pessoaNome
   }
 })
 
 async function handleSubmit() {
+  if (!form.pessoaId) {
+    return
+  }
   saving.value = true
   const payload = {
     pessoaId: form.pessoaId,

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
@@ -25,7 +25,9 @@ describe('BeneficiarioFormView', () => {
 
   beforeEach(async () => {
     setActivePinia(createPinia())
-    listPessoasMock.mockReset().mockResolvedValue({ data: { content: [{ id: 'p1', nome: 'Fulano', cpf: '11111111111' }] } })
+    listPessoasMock
+      .mockReset()
+      .mockResolvedValue({ data: { content: [{ id: 'p1', nome: 'Fulano', cpf: '11111111111' }] } })
     getMock.mockReset()
     createMock.mockReset().mockResolvedValue({ data: {} })
     router = createRouter({
@@ -43,16 +45,48 @@ describe('BeneficiarioFormView', () => {
     return mount(BeneficiarioFormView, { props, global: { plugins: [router] } })
   }
 
-  it('shows "Novo Beneficiário" and searches Pessoas on mount, in create mode', async () => {
+  async function pickPessoa(wrapper, text = 'ful') {
+    await wrapper.find('#pessoaId input').setValue(text)
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+    await wrapper.find('.searchable-select__option').trigger('mousedown')
+  }
+
+  it('shows "Novo Beneficiário" in create mode, with no Pessoa search on mount', async () => {
     const wrapper = mountView()
     await flushPromises()
 
     expect(wrapper.find('h1').text()).toBe('Novo Beneficiário')
-    expect(listPessoasMock).toHaveBeenCalledWith({ nome: '', size: 20 })
-    expect(wrapper.findAll('#pessoaId option')).toHaveLength(2) // placeholder + Fulano
+    expect(listPessoasMock).not.toHaveBeenCalled()
+    expect(wrapper.find('#pessoaId input').element.value).toBe('')
   })
 
-  it('loads and pre-fills the existing record, in edit mode', async () => {
+  it('typing into the Pessoa field narrows to matching people via pessoaApi.list', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.find('#pessoaId input').setValue('ful')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(listPessoasMock).toHaveBeenCalledWith({ nome: 'ful', size: 20 })
+    expect(wrapper.find('.searchable-select__option').text()).toBe('Fulano (11111111111)')
+    vi.useRealTimers()
+  })
+
+  it('selecting a Pessoa sets the form value and shows the selected name', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await pickPessoa(wrapper)
+
+    expect(wrapper.find('#pessoaId input').element.value).toBe('Fulano (11111111111)')
+    vi.useRealTimers()
+  })
+
+  it('loads and pre-fills the existing record, in edit mode, without a search', async () => {
     getMock.mockResolvedValue({
       data: {
         pessoaId: 'p2',
@@ -71,40 +105,35 @@ describe('BeneficiarioFormView', () => {
     expect(getMock).toHaveBeenCalledWith('b1')
     expect(wrapper.find('#matricula').element.value).toBe('MAT-9')
     expect(wrapper.find('#tipo').element.value).toBe('DEPENDENTE')
-    // the edited record's Pessoa (p2) isn't among the search results (only p1 is) — it must be
-    // prepended so the <select> can show it as selected.
-    expect(wrapper.find('#pessoaId').element.value).toBe('p2')
-    expect(wrapper.text()).toContain('Outra Pessoa')
-  })
-
-  it("doesn't duplicate the Pessoa option when it's already among the search results", async () => {
-    getMock.mockResolvedValue({
-      data: {
-        pessoaId: 'p1',
-        pessoaNome: 'Fulano',
-        matricula: 'MAT-1',
-        tipo: 'TITULAR',
-        status: 'ATIVO',
-        dataAdesao: null
-      }
-    })
-
-    const wrapper = mountView({ id: 'b1' })
-    await flushPromises()
-
-    expect(wrapper.findAll('#pessoaId option')).toHaveLength(2) // placeholder + Fulano, no dupe
+    expect(wrapper.find('#pessoaId input').element.value).toBe('Outra Pessoa')
+    expect(listPessoasMock).not.toHaveBeenCalled()
   })
 
   it('creates a new Beneficiário and navigates back on success', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     const wrapper = mountView()
     await flushPromises()
 
-    await wrapper.find('#pessoaId').setValue('p1')
+    await pickPessoa(wrapper)
     await wrapper.find('#matricula').setValue('MAT-NEW')
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ pessoaId: 'p1' }))
     expect(router.currentRoute.value.path).toBe('/beneficiarios')
+    vi.useRealTimers()
+  })
+
+  it('does not submit without a Pessoa selected', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.find('#matricula').setValue('MAT-NEW')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(createMock).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.path).toBe('/')
   })
 
   it('updates an existing Beneficiário and navigates back on success, in edit mode', async () => {
@@ -131,12 +160,13 @@ describe('BeneficiarioFormView', () => {
 
     expect(store.update).toHaveBeenCalledWith(
       'b1',
-      expect.objectContaining({ matricula: 'MAT-1-CHANGED' })
+      expect.objectContaining({ pessoaId: 'p1', matricula: 'MAT-1-CHANGED' })
     )
     expect(router.currentRoute.value.path).toBe('/beneficiarios')
   })
 
   it('shows the error and stays on the page when saving fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     const wrapper = mountView()
     await flushPromises()
     // Route the store's create() to fail by leaving pessoaId blank isn't representative of a
@@ -149,7 +179,7 @@ describe('BeneficiarioFormView', () => {
       return false
     })
 
-    await wrapper.find('#pessoaId').setValue('p1')
+    await pickPessoa(wrapper)
     await wrapper.find('#matricula').setValue('MAT-DUP')
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
@@ -157,29 +187,6 @@ describe('BeneficiarioFormView', () => {
     expect(store.create).toHaveBeenCalled()
     expect(router.currentRoute.value.path).toBe('/')
     expect(wrapper.find('.error-banner').exists()).toBe(true)
-  })
-
-  describe('with fake timers', () => {
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true })
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it('debounces the Pessoa search input', async () => {
-      const wrapper = mountView()
-      await flushPromises()
-      listPessoasMock.mockClear()
-
-      await wrapper.find('#pessoaBusca').setValue('ana')
-      expect(listPessoasMock).not.toHaveBeenCalled()
-
-      await vi.advanceTimersByTimeAsync(300)
-      await flushPromises()
-
-      expect(listPessoasMock).toHaveBeenCalledWith({ nome: 'ana', size: 20 })
-    })
+    vi.useRealTimers()
   })
 })

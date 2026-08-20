@@ -85,6 +85,25 @@ class BeneficiarioFilteringTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void filtersByAFragmentFromTheMiddleOfThePessoaNameCaseInsensitively() {
+        // Seeded Pessoa names contain "Pessoa N" — "ssoa " is neither the start nor the whole
+        // name, and differs in case from the stored value (spec 009-searchable-select-filters
+        // FR-002).
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/beneficiarios?pessoaNome=SSOA ",
+                        HttpMethod.GET,
+                        entity(null, authHeaders(ANA_USERNAME, ANA_PASSWORD, TENANT_ALFA_ID)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().get("content");
+        assertThat(content).isNotEmpty();
+        assertThat(content)
+                .allMatch(item -> ((String) item.get("pessoaNome")).toLowerCase().contains("ssoa "));
+    }
+
+    @Test
     void pageBeyondLastReturnsEmptyNotError() {
         ResponseEntity<Map> response =
                 restTemplate.exchange(

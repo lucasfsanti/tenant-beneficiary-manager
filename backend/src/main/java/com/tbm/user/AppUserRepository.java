@@ -4,13 +4,25 @@ import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
 
     Optional<AppUser> findByUsername(String username);
+
+    /**
+     * Case-insensitive substring match, capped by {@code pageable} (spec 009-searchable-select-
+     * filters FR-003/SC-005). Mirrors {@code BeneficiarioRepository.search}'s explicit
+     * {@code @Query} + {@code LIKE} pattern rather than a derived-name query, for consistency with
+     * this codebase's established convention for capped/multi-condition search methods.
+     */
+    @Query("SELECT u FROM AppUser u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :username, '%')) "
+            + "ORDER BY u.username ASC")
+    List<AppUser> searchByUsername(@Param("username") String username, Pageable pageable);
 
     /**
      * Locking read of every currently-System-Admin user, used by grant/revoke to enforce FR-011's

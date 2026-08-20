@@ -53,15 +53,69 @@ describe('TenantFormView member management', () => {
     return { wrapper, store }
   }
 
-  it('calls tenant.addMember when the add-member form is submitted', async () => {
+  it('calls tenant.addMember with the specifically selected user, out of several matches', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     const { wrapper, store } = await mountView()
+    store.searchUser = vi.fn(() =>
+      Promise.resolve([
+        { id: 'user-3', username: 'carla' },
+        { id: 'user-5', username: 'carlos' }
+      ])
+    )
 
-    await wrapper.find('.add-member-form input').setValue('carla')
+    await wrapper.find('.add-member-form input').setValue('carl')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+    const options = wrapper.findAll('.searchable-select__option')
+    expect(options).toHaveLength(2)
+    await options[1].trigger('mousedown')
     await wrapper.find('.add-member-form').trigger('submit.prevent')
     await flushPromises()
 
-    expect(store.searchUser).toHaveBeenCalledWith('carla')
-    expect(store.addMember).toHaveBeenCalledWith('tenant-1', 'user-3')
+    expect(store.searchUser).toHaveBeenCalledWith('carl')
+    expect(store.addMember).toHaveBeenCalledWith('tenant-1', 'user-5')
+    vi.useRealTimers()
+  })
+
+  it('does not call tenant.addMember when submitted without picking a match', async () => {
+    const { wrapper, store } = await mountView()
+
+    await wrapper.find('.add-member-form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(store.addMember).not.toHaveBeenCalled()
+  })
+
+  it('does not call tenant.searchUser for a query shorter than 2 characters', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const { wrapper, store } = await mountView()
+
+    await wrapper.find('.add-member-form input').setValue('c')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(store.searchUser).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('disables the Adicionar button until a match is selected', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const { wrapper, store } = await mountView()
+    store.searchUser = vi.fn(() => Promise.resolve([]))
+
+    expect(
+      wrapper.find('.add-member-form button[type="submit"]').attributes('disabled')
+    ).toBeDefined()
+
+    await wrapper.find('.add-member-form input').setValue('ninguem')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Nenhum resultado encontrado.')
+    expect(
+      wrapper.find('.add-member-form button[type="submit"]').attributes('disabled')
+    ).toBeDefined()
+    vi.useRealTimers()
   })
 
   it('calls tenant.removeMember when a member row is removed', async () => {
@@ -100,16 +154,19 @@ describe('TenantFormView member management', () => {
     expect(store.revokeTenantAdmin).toHaveBeenCalledWith('tenant-1', 'user-4')
   })
 
-  it('shows a not-found problem and does not add a member when the search finds no one', async () => {
-    const { wrapper, store } = await mountView()
-    store.searchUser = vi.fn(() => Promise.resolve([]))
+  it('resets the add-member field after a successful add', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const { wrapper } = await mountView()
 
-    await wrapper.find('.add-member-form input').setValue('ninguem')
+    await wrapper.find('.add-member-form input').setValue('carla')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+    await wrapper.find('.searchable-select__option').trigger('mousedown')
     await wrapper.find('.add-member-form').trigger('submit.prevent')
     await flushPromises()
 
-    expect(store.addMember).not.toHaveBeenCalled()
-    expect(store.problem.title).toBe('Usuário não encontrado')
+    expect(wrapper.find('.add-member-form input').element.value).toBe('')
+    vi.useRealTimers()
   })
 
   it('does not remove a member when the removal confirmation is declined', async () => {

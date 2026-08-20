@@ -190,7 +190,7 @@ está em português.
   (`lower(pessoa.nome)`) ou uma coluna denormalizada indexada seria mais eficiente.
 - **Auditoria mais rica** (quem criou/alterou cada registro), hoje limitada a
   `created_at`/`updated_at`.
-- **Front-end:** Melhorias na interface utilizando biblioteca de componentes e Tailwind CSS.
+- **Front-end:** Melhorias na interface utilizando uma biblioteca de componentes e Tailwind CSS.
 - **Testes E2E** automatizados, para testar casos de uso simulando um usuário real.
 - **CI** rodando `mvn test` (com Testcontainers) e `npm test` a cada push, hoje só documentado
   como comando local.

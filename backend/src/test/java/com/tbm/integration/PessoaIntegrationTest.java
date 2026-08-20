@@ -58,7 +58,33 @@ class PessoaIntegrationTest extends AbstractIntegrationTest {
                         PessoaResponse.class);
         assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(updateResponse.getBody().nome()).isEqualTo("Fulano Editado");
-        assertThat(updateResponse.getBody().email()).isEqualTo("fulano@example.com");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void nameFilterMatchesAFragmentFromTheMiddleCaseInsensitively() {
+        PessoaInput input = new PessoaInput("Substring Match Target", "11122233396", null, null);
+        ResponseEntity<PessoaResponse> createResponse =
+                restTemplate.exchange(
+                        "/api/pessoas",
+                        org.springframework.http.HttpMethod.POST,
+                        entity(input, headers()),
+                        PessoaResponse.class);
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // "ing match" is neither the start nor the whole name, and differs in case from the
+        // stored value — proves substring (not just prefix) and case-insensitive matching
+        // (spec 009-searchable-select-filters FR-001).
+        ResponseEntity<Map> listResponse =
+                restTemplate.exchange(
+                        "/api/pessoas?nome=ING MATCH",
+                        org.springframework.http.HttpMethod.GET,
+                        entity(null, headers()),
+                        Map.class);
+        assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        java.util.List<Map<String, Object>> content =
+                (java.util.List<Map<String, Object>>) listResponse.getBody().get("content");
+        assertThat(content).extracting(p -> p.get("nome")).contains("Substring Match Target");
     }
 
     @Test

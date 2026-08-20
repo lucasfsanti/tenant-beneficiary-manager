@@ -20,8 +20,14 @@
       <h2>Membros</h2>
 
       <form class="add-member-form" @submit.prevent="handleAddMember">
-        <input v-model="newMemberUsername" type="text" placeholder="Nome de usuário" required />
-        <button type="submit" class="button">Adicionar</button>
+        <SearchableSelect
+          :key="memberSearchKey"
+          v-model="selectedUserId"
+          :search="searchUsers"
+          :option-label="userOptionLabel"
+          placeholder="Nome de usuário"
+        />
+        <button type="submit" class="button" :disabled="!selectedUserId">Adicionar</button>
       </form>
 
       <p v-if="store.members.length === 0" class="empty-state">Nenhum membro neste tenant.</p>
@@ -64,6 +70,7 @@ import { useTenantStore } from '../stores/tenant'
 import { useAuthStore } from '../stores/auth'
 import tenantAdminApi from '../services/tenantAdminApi'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 
 const props = defineProps({
   id: { type: String, default: null }
@@ -74,7 +81,22 @@ const store = useTenantStore()
 const auth = useAuthStore()
 const router = useRouter()
 const saving = ref(false)
-const newMemberUsername = ref('')
+const selectedUserId = ref(null)
+const memberSearchKey = ref(0)
+
+// Below the backend's own 2-character minimum (research.md §3), skip the network round-trip
+// entirely — the backend would just return [] anyway, so this is a network-efficiency nicety
+// layered on top of, not instead of, the server-side enforcement.
+function searchUsers(username) {
+  if (username.trim().length < 2) {
+    return []
+  }
+  return store.searchUser(username)
+}
+
+function userOptionLabel(user) {
+  return user.username
+}
 
 const cancelTo = computed(() => (auth.isSystemAdmin ? '/tenants' : '/pessoas'))
 
@@ -103,17 +125,13 @@ async function handleSubmit() {
 }
 
 async function handleAddMember() {
-  const results = await store.searchUser(newMemberUsername.value)
-  if (results.length === 0) {
-    store.problem = {
-      title: 'Usuário não encontrado',
-      detail: `Nenhum usuário com o nome de usuário "${newMemberUsername.value}".`
-    }
+  if (!selectedUserId.value) {
     return
   }
-  const ok = await store.addMember(props.id, results[0].id)
+  const ok = await store.addMember(props.id, selectedUserId.value)
   if (ok) {
-    newMemberUsername.value = ''
+    selectedUserId.value = null
+    memberSearchKey.value += 1
     await store.fetchMembers(props.id)
   }
 }
@@ -179,7 +197,7 @@ input {
   margin-bottom: 1rem;
 }
 
-.add-member-form input {
+.add-member-form .searchable-select {
   flex: 1;
   max-width: 320px;
 }
