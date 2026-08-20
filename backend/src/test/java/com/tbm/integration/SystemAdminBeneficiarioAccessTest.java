@@ -135,4 +135,56 @@ class SystemAdminBeneficiarioAccessTest extends AbstractIntegrationTest {
 
         assertThat(auditLogRepository.count()).isEqualTo(before);
     }
+
+    /** Coverage gap (spec 008-test-coverage-tracking, research.md §3): a System Admin who is
+     * ALSO a genuine member of the target tenant is not exercising the bypass at all, so this
+     * must not be audited — distinct from {@link #systemAdminCrossTenantAccessProducesAnAuditRecord}. */
+    @Test
+    void systemAdminWhoIsAlsoAGenuineMemberProducesNoAuditRecord() {
+        ResponseEntity<Map> createTenantResponse =
+                restTemplate.exchange(
+                        "/api/tenants",
+                        HttpMethod.POST,
+                        entity(
+                                Map.of("name", "Admin Membership Coverage Test " + UUID.randomUUID()),
+                                authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                        Map.class);
+        assertThat(createTenantResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String tenantId = (String) createTenantResponse.getBody().get("id");
+
+        try {
+            ResponseEntity<Map> addMemberResponse =
+                    restTemplate.exchange(
+                            "/api/tenants/" + tenantId + "/members",
+                            HttpMethod.POST,
+                            entity(
+                                    Map.of("userId", ADMIN_USER_ID.toString()),
+                                    authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                            Map.class);
+            assertThat(addMemberResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+            long before = auditLogRepository.count();
+
+            ResponseEntity<Map> listResponse =
+                    restTemplate.exchange(
+                            "/api/beneficiarios",
+                            HttpMethod.GET,
+                            entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, tenantId)),
+                            Map.class);
+            assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+            assertThat(auditLogRepository.count()).isEqualTo(before);
+        } finally {
+            restTemplate.exchange(
+                    "/api/tenants/" + tenantId + "/members/" + ADMIN_USER_ID,
+                    HttpMethod.DELETE,
+                    entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                    Void.class);
+            restTemplate.exchange(
+                    "/api/tenants/" + tenantId,
+                    HttpMethod.DELETE,
+                    entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                    Void.class);
+        }
+    }
 }

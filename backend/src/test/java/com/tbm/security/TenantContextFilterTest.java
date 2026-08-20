@@ -88,6 +88,7 @@ class TenantContextFilterTest {
                 ArgumentCaptor.forClass(TenantAccessAuditLog.class);
         verify(auditLogRepository).save(captor.capture());
         TenantAccessAuditLog saved = captor.getValue();
+        org.assertj.core.api.Assertions.assertThat(saved.getId()).isNotNull();
         org.assertj.core.api.Assertions.assertThat(saved.getAdminUserId()).isEqualTo(adminUserId);
         org.assertj.core.api.Assertions.assertThat(saved.getTargetTenantId())
                 .isEqualTo(targetTenantId);

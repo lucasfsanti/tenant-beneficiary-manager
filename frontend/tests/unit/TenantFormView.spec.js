@@ -99,4 +99,106 @@ describe('TenantFormView member management', () => {
 
     expect(store.revokeTenantAdmin).toHaveBeenCalledWith('tenant-1', 'user-4')
   })
+
+  it('shows a not-found problem and does not add a member when the search finds no one', async () => {
+    const { wrapper, store } = await mountView()
+    store.searchUser = vi.fn(() => Promise.resolve([]))
+
+    await wrapper.find('.add-member-form input').setValue('ninguem')
+    await wrapper.find('.add-member-form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(store.addMember).not.toHaveBeenCalled()
+    expect(store.problem.title).toBe('Usuário não encontrado')
+  })
+
+  it('does not remove a member when the removal confirmation is declined', async () => {
+    const { wrapper, store } = await mountView()
+    window.confirm = vi.fn(() => false)
+
+    await wrapper.find('.button--danger').trigger('click')
+    await flushPromises()
+
+    expect(store.removeMember).not.toHaveBeenCalled()
+  })
+})
+
+describe('TenantFormView submit', () => {
+  let router
+
+  beforeEach(async () => {
+    setActivePinia(createPinia())
+    router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: { template: '<div />' } },
+        { path: '/tenants', component: { template: '<div />' } },
+        { path: '/pessoas', component: { template: '<div />' } }
+      ]
+    })
+    await router.push('/')
+    await router.isReady()
+  })
+
+  it('creates a new tenant and navigates to /tenants on success', async () => {
+    const auth = useAuthStore()
+    auth.user = { id: 'admin-1', isSystemAdmin: true, tenants: [] }
+    const wrapper = mount(TenantFormView, { global: { plugins: [router] } })
+    const store = useTenantStore()
+    store.create = vi.fn(() => Promise.resolve(true))
+
+    await wrapper.find('#name').setValue('Tenant Novo')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(store.create).toHaveBeenCalledWith({ name: 'Tenant Novo' })
+    expect(router.currentRoute.value.path).toBe('/tenants')
+  })
+
+  it('does not navigate when creating a tenant fails', async () => {
+    const auth = useAuthStore()
+    auth.user = { id: 'admin-1', isSystemAdmin: true, tenants: [] }
+    const wrapper = mount(TenantFormView, { global: { plugins: [router] } })
+    const store = useTenantStore()
+    store.create = vi.fn(() => Promise.resolve(false))
+
+    await wrapper.find('#name').setValue('Tenant Novo')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('updates an existing tenant and navigates on success', async () => {
+    const auth = useAuthStore()
+    auth.user = { id: 'admin-1', isSystemAdmin: true, tenants: [] }
+    vi.mocked((await import('../../src/services/tenantAdminApi')).default.getTenant).mockResolvedValue(
+      { data: { id: 'tenant-1', name: 'Tenant Alfa' } }
+    )
+    const wrapper = mount(TenantFormView, {
+      props: { id: 'tenant-1' },
+      global: { plugins: [router] }
+    })
+    await flushPromises()
+    const store = useTenantStore()
+    store.update = vi.fn(() => Promise.resolve(true))
+
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(store.update).toHaveBeenCalledWith('tenant-1', { name: 'Tenant Alfa' })
+    expect(router.currentRoute.value.path).toBe('/tenants')
+  })
+
+  it('sends a non-system-admin Tenant Admin back to /pessoas on cancel', async () => {
+    const auth = useAuthStore()
+    auth.user = { id: 'user-1', tenants: [{ id: 'tenant-1', isTenantAdmin: true }] }
+    const wrapper = mount(TenantFormView, {
+      props: { id: 'tenant-1' },
+      global: { plugins: [router] }
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.button--secondary').attributes('href')).toBe('/pessoas')
+  })
 })

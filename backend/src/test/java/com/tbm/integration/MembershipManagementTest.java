@@ -152,4 +152,16 @@ class MembershipManagementTest extends AbstractIntegrationTest {
                         Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    void addingMembershipToANonexistentTenantReturnsNotFound() {
+        String unknownTenantId = UUID.randomUUID().toString();
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/tenants/" + unknownTenantId + "/members",
+                        HttpMethod.POST,
+                        entity(Map.of("userId", ADMIN_ID), authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }

@@ -74,4 +74,22 @@ describe('TenantSwitcher', () => {
     expect(options).toHaveLength(3)
     expect(options.map((o) => o.text())).toEqual(['Tenant Alfa', 'Tenant Beta', 'Tenant Gama'])
   })
+
+  it('switches the active tenant when a different option is selected', async () => {
+    const auth = useAuthStore()
+    auth.user = {
+      id: 'user-1',
+      username: 'ana',
+      tenants: [
+        { id: 'tenant-a', name: 'Tenant Alfa' },
+        { id: 'tenant-b', name: 'Tenant Beta' }
+      ]
+    }
+    auth.activeTenantId = 'tenant-a'
+
+    const wrapper = mount(TenantSwitcher)
+    await wrapper.find('select').setValue('tenant-b')
+
+    expect(auth.activeTenantId).toBe('tenant-b')
+  })
 })

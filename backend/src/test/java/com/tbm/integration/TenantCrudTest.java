@@ -122,6 +122,36 @@ class TenantCrudTest extends AbstractIntegrationTest {
                         Map.class));
     }
 
+    @Test
+    void getUpdateAndDeleteReturnNotFoundForAnUnknownTenantId() {
+        String unknownTenantId = UUID.randomUUID().toString();
+
+        ResponseEntity<Map> getResponse =
+                restTemplate.exchange(
+                        "/api/tenants/" + unknownTenantId,
+                        HttpMethod.GET,
+                        entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                        Map.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        Map<String, String> updateInput = Map.of("name", "Should Not Update " + UUID.randomUUID());
+        ResponseEntity<Map> updateResponse =
+                restTemplate.exchange(
+                        "/api/tenants/" + unknownTenantId,
+                        HttpMethod.PUT,
+                        entity(updateInput, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                        Map.class);
+        assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<Map> deleteResponse =
+                restTemplate.exchange(
+                        "/api/tenants/" + unknownTenantId,
+                        HttpMethod.DELETE,
+                        entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                        Map.class);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     private void assertForbidden(ResponseEntity<?> response) {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
