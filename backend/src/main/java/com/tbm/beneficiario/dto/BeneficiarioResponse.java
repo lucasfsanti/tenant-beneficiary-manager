@@ -8,7 +8,6 @@ import java.util.UUID;
 
 public record BeneficiarioResponse(
         UUID id,
-        UUID tenantId,
         UUID pessoaId,
         String pessoaNome,
         String matricula,

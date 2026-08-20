@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "beneficiario")
+@Table(name = "vw_beneficiario")
 public class Beneficiario {
 
     @Id
@@ -19,9 +19,6 @@ public class Beneficiario {
 
     @Column(name = "pessoa_id", nullable = false)
     private UUID pessoaId;
-
-    @Column(name = "tenant_id", nullable = false)
-    private UUID tenantId;
 
     @Column(nullable = false)
     private String matricula;
@@ -57,14 +54,6 @@ public class Beneficiario {
 
     public void setPessoaId(UUID pessoaId) {
         this.pessoaId = pessoaId;
-    }
-
-    public UUID getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(UUID tenantId) {
-        this.tenantId = tenantId;
     }
 
     public String getMatricula() {

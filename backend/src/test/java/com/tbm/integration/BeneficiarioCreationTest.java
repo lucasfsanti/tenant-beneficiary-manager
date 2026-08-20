@@ -37,7 +37,6 @@ class BeneficiarioCreationTest extends AbstractIntegrationTest {
                         BeneficiarioResponse.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().dataAdesao()).isEqualTo(LocalDate.now());
-        assertThat(response.getBody().tenantId()).isEqualTo(UUID.fromString(TENANT_ALFA_ID));
     }
 
     @Test

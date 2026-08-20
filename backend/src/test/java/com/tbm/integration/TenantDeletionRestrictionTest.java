@@ -67,4 +67,40 @@ class TenantDeletionRestrictionTest extends AbstractIntegrationTest {
                     Void.class);
         }
     }
+
+    /** Convergence finding T028: a tenant with zero Beneficiários/memberships but at least one
+     * historical System Admin cross-tenant audit record must still be blocked from deletion —
+     * otherwise the tenant_access_audit_log.target_tenant_id FK would reject the delete with an
+     * uncaught constraint violation instead of the existing friendly BusinessRuleException. */
+    @Test
+    void deletionIsBlockedByAnAuditLogRecordAloneWithNoBeneficiarioOrMembership() {
+        Map<String, String> createInput = Map.of("name", "Audit-Log-Only Block Test " + UUID.randomUUID());
+        String tenantId =
+                (String)
+                        restTemplate
+                                .exchange(
+                                        "/api/tenants",
+                                        HttpMethod.POST,
+                                        entity(createInput, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                                        Map.class)
+                                .getBody()
+                                .get("id");
+
+        // ADMIN_USERNAME (System Admin) holds no membership anywhere, so this GET triggers the
+        // cross-tenant bypass and writes a tenant_access_audit_log row for this brand-new tenant.
+        restTemplate.exchange(
+                "/api/beneficiarios",
+                HttpMethod.GET,
+                entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, tenantId)),
+                Map.class);
+
+        ResponseEntity<Map> response =
+                restTemplate.exchange(
+                        "/api/tenants/" + tenantId,
+                        HttpMethod.DELETE,
+                        entity(null, authHeaders(ADMIN_USERNAME, ADMIN_PASSWORD, null)),
+                        Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().get("detail")).isNotNull();
+    }
 }

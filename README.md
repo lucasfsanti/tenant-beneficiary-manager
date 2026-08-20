@@ -74,29 +74,42 @@ cd frontend && npm install && npm test
 
 ### Isolamento multitenant (Constitution Principle I)
 
-Estratégia: **banco/schema único, coluna discriminadora**. Um único PostgreSQL guarda tudo.
-As tabelas globais (`pessoa`, `tenant`, `app_user`, `user_tenant_membership`) não têm coluna de
-tenant; a tabela `beneficiario` tem uma coluna `tenant_id`. O tenant ativo de uma requisição é
-resolvido **uma única vez**, por um filtro central (`TenantContextFilter`), que:
+Estratégia: **banco/schema único, coluna discriminadora, com o filtro aplicado pelo próprio
+banco**. Um único PostgreSQL guarda tudo. As tabelas globais (`pessoa`, `tenant`, `app_user`,
+`user_tenant_membership`) não têm coluna de tenant; a tabela `beneficiario` tem uma coluna
+`tenant_id`, mas a aplicação nunca a lê diretamente — ela enxerga a view `vw_beneficiario`
+(spec 007-tenant-transparent-views), que filtra por uma variável de sessão do Postgres. A seleção
+de qual tenant está ativo continua exatamente como antes; o que mudou foi **onde** o filtro é
+efetivamente aplicado. Um filtro central (`TenantContextFilter`):
 
 1. Lê o principal autenticado (JWT, resolvido por `JwtAuthenticationFilter`).
 2. Lê o cabeçalho `X-Tenant-Id`.
 3. Valida, contra `user_tenant_membership`, que o usuário realmente pertence a esse tenant —
-   caso contrário, responde `403` **antes de qualquer acesso a repositório**.
+   caso contrário, responde `403` **antes de qualquer acesso a repositório** — exceto para um
+   System Admin, que pode agir sobre qualquer tenant independentemente de membership (FR-008); todo
+   uso desse bypass é registrado em `tenant_access_audit_log` (quem, quando, qual tenant).
 4. Publica o tenant validado em `TenantContext` (um `ThreadLocal` por requisição).
 
-`BeneficiarioService` é o único ponto que lê `TenantContext`, e repassa esse id explicitamente
-para cada método de `BeneficiarioRepository` (`findByIdAndTenantId`, `search(tenantId, ...)`,
-etc.) — nenhuma query pode "esquecer" o filtro porque o parâmetro é obrigatório na assinatura.
-Um id de Beneficiário de outro tenant retorna `404` (nunca `403` ou qualquer confirmação de que o
-registro existe em outro tenant), evitando IDOR por enumeração de ids.
+`BeneficiarioService` é o único ponto que lê `TenantContext`, e agora também aplica esse id à
+sessão do banco (`TenantSessionContext`, via `SELECT set_config('app.tenant_id', ?, true)`,
+escopado à transação) antes de qualquer query. `vw_beneficiario` filtra por
+`tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid`, e a coluna `tenant_id` da
+tabela base ganhou o mesmo `DEFAULT`, então um `INSERT` feito através da view (que nunca menciona
+`tenant_id` — a entidade JPA não tem mais esse campo) é automaticamente carimbado com o tenant
+ativo. Resultado: nenhuma query Java, existente ou futura, pode "esquecer" o filtro — mesmo que o
+código de aplicação tivesse um bug, o próprio banco não devolveria linhas de outro tenant. Um id
+de Beneficiário de outro tenant retorna `404` (nunca `403` ou qualquer confirmação de que o
+registro existe em outro tenant), evitando IDOR por enumeração de ids. Se a transação nunca
+define `app.tenant_id`, a view devolve zero linhas (não um erro) e um `INSERT` falha por violar o
+`NOT NULL` de `tenant_id` — nos dois casos, falha fechada, nunca dados sem filtro.
 
 **Por que não schema-per-tenant ou database-per-tenant?** Ambos dão isolamento físico mais forte,
 mas exigem provisionamento de schema/banco por tenant e tornam artificial a exigência do enunciado
 de "um banco global com Pessoa/tenants/usuários" — Pessoa precisaria viver em outro lugar
 compartilhado de qualquer forma. Para a escala deste exercício (poucos tenants, dezenas/centenas
-de registros), a coluna discriminadora é a opção mais simples que ainda concentra o reforço do
-isolamento em um único ponto auditável.
+de registros), a coluna discriminadora — agora reforçada por uma view em vez de depender só do
+código de aplicação — é a opção mais simples que ainda concentra o reforço do isolamento em um
+único ponto auditável.
 
 ### Controle de acesso por papéis
 

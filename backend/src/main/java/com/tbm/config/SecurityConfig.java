@@ -3,7 +3,9 @@ package com.tbm.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tbm.security.JwtAuthenticationFilter;
 import com.tbm.security.JwtService;
+import com.tbm.security.TenantAccessAuditLogRepository;
 import com.tbm.security.TenantContextFilter;
+import com.tbm.tenant.TenantRepository;
 import com.tbm.user.AppUserRepository;
 import com.tbm.user.UserTenantMembershipRepository;
 import java.util.List;
@@ -48,7 +50,9 @@ public class SecurityConfig {
             JwtService jwtService,
             UserTenantMembershipRepository membershipRepository,
             AppUserRepository appUserRepository,
-            ObjectMapper objectMapper)
+            ObjectMapper objectMapper,
+            TenantAccessAuditLogRepository auditLogRepository,
+            TenantRepository tenantRepository)
             throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -74,7 +78,8 @@ public class SecurityConfig {
                         new JwtAuthenticationFilter(jwtService, appUserRepository),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(
-                        new TenantContextFilter(membershipRepository, objectMapper),
+                        new TenantContextFilter(
+                                membershipRepository, objectMapper, auditLogRepository, tenantRepository),
                         JwtAuthenticationFilter.class);
         return http.build();
     }

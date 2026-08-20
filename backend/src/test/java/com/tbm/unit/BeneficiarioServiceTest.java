@@ -8,6 +8,7 @@ import com.tbm.beneficiario.BeneficiarioService;
 import com.tbm.common.exception.BusinessRuleException;
 import com.tbm.pessoa.PessoaRepository;
 import com.tbm.security.TenantContext;
+import com.tbm.security.TenantSessionContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
@@ -18,7 +19,10 @@ import org.springframework.data.domain.PageRequest;
 class BeneficiarioServiceTest {
 
     private final BeneficiarioService service =
-            new BeneficiarioService(mock(BeneficiarioRepository.class), mock(PessoaRepository.class));
+            new BeneficiarioService(
+                    mock(BeneficiarioRepository.class),
+                    mock(PessoaRepository.class),
+                    mock(TenantSessionContext.class));
 
     @AfterEach
     void clearTenantContext() {

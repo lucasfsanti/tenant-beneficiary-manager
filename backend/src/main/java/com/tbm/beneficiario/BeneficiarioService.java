@@ -9,6 +9,7 @@ import com.tbm.common.exception.NotFoundException;
 import com.tbm.pessoa.Pessoa;
 import com.tbm.pessoa.PessoaRepository;
 import com.tbm.security.TenantContext;
+import com.tbm.security.TenantSessionContext;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -22,20 +23,23 @@ public class BeneficiarioService {
 
     private final BeneficiarioRepository beneficiarioRepository;
     private final PessoaRepository pessoaRepository;
+    private final TenantSessionContext tenantSessionContext;
 
     public BeneficiarioService(
-            BeneficiarioRepository beneficiarioRepository, PessoaRepository pessoaRepository) {
+            BeneficiarioRepository beneficiarioRepository,
+            PessoaRepository pessoaRepository,
+            TenantSessionContext tenantSessionContext) {
         this.beneficiarioRepository = beneficiarioRepository;
         this.pessoaRepository = pessoaRepository;
+        this.tenantSessionContext = tenantSessionContext;
     }
 
     @Transactional(readOnly = true)
     public PageResponse<BeneficiarioResponse> list(
             String pessoaNome, BeneficiarioStatus status, Pageable pageable) {
-        UUID tenantId = activeTenantId();
+        activeTenantId();
         String normalizedNome = (pessoaNome == null || pessoaNome.isBlank()) ? "" : pessoaNome;
-        Page<Beneficiario> page =
-                beneficiarioRepository.search(tenantId, normalizedNome, status, pageable);
+        Page<Beneficiario> page = beneficiarioRepository.search(normalizedNome, status, pageable);
         return PageResponse.of(page.map(this::toResponse));
     }
 
@@ -46,7 +50,7 @@ public class BeneficiarioService {
 
     @Transactional
     public BeneficiarioResponse create(BeneficiarioInput input) {
-        UUID tenantId = activeTenantId();
+        activeTenantId();
         Pessoa pessoa =
                 pessoaRepository
                         .findById(input.pessoaId())
@@ -54,13 +58,12 @@ public class BeneficiarioService {
                                 () ->
                                         new BusinessRuleException(
                                                 "A Pessoa informada não existe."));
-        if (beneficiarioRepository.existsByTenantIdAndMatricula(tenantId, input.matricula())) {
+        if (beneficiarioRepository.existsByMatricula(input.matricula())) {
             throw new ConflictException("Matrícula já cadastrada neste tenant.");
         }
 
         Beneficiario beneficiario = new Beneficiario();
         beneficiario.setId(UUID.randomUUID());
-        beneficiario.setTenantId(tenantId);
         beneficiario.setPessoaId(pessoa.getId());
         applyInput(beneficiario, input);
         // FR-023: omitting dataAdesao on creation defaults it to the record's creation date.
@@ -76,13 +79,11 @@ public class BeneficiarioService {
     @Transactional
     public BeneficiarioResponse update(UUID id, BeneficiarioInput input) {
         Beneficiario beneficiario = findOrThrow(id);
-        UUID tenantId = beneficiario.getTenantId();
 
         if (!pessoaRepository.existsById(input.pessoaId())) {
             throw new BusinessRuleException("A Pessoa informada não existe.");
         }
-        if (beneficiarioRepository.existsByTenantIdAndMatriculaAndIdNot(
-                tenantId, input.matricula(), id)) {
+        if (beneficiarioRepository.existsByMatriculaAndIdNot(input.matricula(), id)) {
             throw new ConflictException("Matrícula já cadastrada neste tenant.");
         }
 
@@ -99,9 +100,9 @@ public class BeneficiarioService {
     }
 
     private Beneficiario findOrThrow(UUID id) {
-        UUID tenantId = activeTenantId();
+        activeTenantId();
         return beneficiarioRepository
-                .findByIdAndTenantId(id, tenantId)
+                .findById(id)
                 .orElseThrow(() -> new NotFoundException("Beneficiário não encontrado."));
     }
 
@@ -110,6 +111,7 @@ public class BeneficiarioService {
         if (tenantId == null) {
             throw new BusinessRuleException("Nenhum tenant ativo resolvido para a requisição.");
         }
+        tenantSessionContext.apply(tenantId);
         return tenantId;
     }
 
@@ -132,7 +134,6 @@ public class BeneficiarioService {
                         .orElse(null);
         return new BeneficiarioResponse(
                 beneficiario.getId(),
-                beneficiario.getTenantId(),
                 beneficiario.getPessoaId(),
                 pessoaNome,
                 beneficiario.getMatricula(),

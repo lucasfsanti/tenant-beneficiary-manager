@@ -3,6 +3,8 @@ package com.tbm.tenant;
 import com.tbm.beneficiario.BeneficiarioRepository;
 import com.tbm.common.exception.BusinessRuleException;
 import com.tbm.common.exception.NotFoundException;
+import com.tbm.security.TenantAccessAuditLogRepository;
+import com.tbm.security.TenantSessionContext;
 import com.tbm.tenant.dto.TenantInput;
 import com.tbm.tenant.dto.TenantResponse;
 import com.tbm.user.UserTenantMembershipRepository;
@@ -19,14 +21,20 @@ public class TenantService {
     private final TenantRepository tenantRepository;
     private final UserTenantMembershipRepository membershipRepository;
     private final BeneficiarioRepository beneficiarioRepository;
+    private final TenantSessionContext tenantSessionContext;
+    private final TenantAccessAuditLogRepository auditLogRepository;
 
     public TenantService(
             TenantRepository tenantRepository,
             UserTenantMembershipRepository membershipRepository,
-            BeneficiarioRepository beneficiarioRepository) {
+            BeneficiarioRepository beneficiarioRepository,
+            TenantSessionContext tenantSessionContext,
+            TenantAccessAuditLogRepository auditLogRepository) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.beneficiarioRepository = beneficiarioRepository;
+        this.tenantSessionContext = tenantSessionContext;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @PreAuthorize("hasRole('SYSTEM_ADMIN')")
@@ -63,10 +71,13 @@ public class TenantService {
     @Transactional
     public void delete(UUID tenantId) {
         Tenant tenant = findOrThrow(tenantId);
-        if (beneficiarioRepository.existsByTenantId(tenantId)
-                || membershipRepository.existsByTenant_Id(tenantId)) {
+        tenantSessionContext.apply(tenantId);
+        if (beneficiarioRepository.count() > 0
+                || membershipRepository.existsByTenant_Id(tenantId)
+                || auditLogRepository.existsByTargetTenantId(tenantId)) {
             throw new BusinessRuleException(
-                    "Este Tenant ainda está vinculado a registros de Beneficiário ou associações de usuário.");
+                    "Este Tenant ainda está vinculado a registros de Beneficiário, associações de"
+                            + " usuário ou acessos administrativos auditados.");
         }
         tenantRepository.delete(tenant);
     }
